@@ -31,7 +31,8 @@ public class Game {
 
             switch (option) {
                 case "1":
-                    System.out.println("O jogo ainda não foi implementado.");
+                    Board board = new Board();
+                    board.print();
                     break;
                 case "2":
                     System.out.println("Saindo do jogo.");
