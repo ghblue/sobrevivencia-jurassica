@@ -1,5 +1,7 @@
 package game;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Scanner;
 
 public class Game {
@@ -52,6 +54,16 @@ public class Game {
         Board board = new Board();
         board.print(player);
         showPlayerStatus(player);
+        showTestDinosaurs(createTestDinosaurs());
+    }
+
+    private List<Dinosaur> createTestDinosaurs() {
+        List<Dinosaur> dinosaurs = new ArrayList<>();
+        dinosaurs.add(new Compsognathus(new Position(1, 1)));
+        dinosaurs.add(new Troodon(new Position(2, 2)));
+        dinosaurs.add(new Velociraptor(new Position(3, 3)));
+        dinosaurs.add(new TRex(new Position(4, 4)));
+        return dinosaurs;
     }
 
     private Difficulty chooseDifficulty() {
@@ -85,5 +97,23 @@ public class Game {
         System.out.println("Saude: " + player.getHealth());
         System.out.println("Percepcao: " + player.getPerception());
         System.out.printf("Posicao atual: linha %d, coluna %d%n", position.getRow(), position.getColumn());
+    }
+
+    private void showTestDinosaurs(List<Dinosaur> dinosaurs) {
+        System.out.println("Dinossauros de teste");
+
+        for (Dinosaur dinosaur : dinosaurs) {
+            Position position = dinosaur.getCurrentPosition();
+
+            System.out.printf(
+                    "%s | simbolo: %s | saude: %d | posicao de teste: linha %d, coluna %d | descricao: %s%n",
+                    dinosaur.getName(),
+                    dinosaur.getVisualSymbol(),
+                    dinosaur.getHealth(),
+                    position.getRow(),
+                    position.getColumn(),
+                    dinosaur.getDescription()
+            );
+        }
     }
 }
