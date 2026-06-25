@@ -2,13 +2,22 @@ package game;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 import java.util.Scanner;
 
 public class Game {
+    private static final int COMPSOGNATHUS_COUNT = 2;
+    private static final int VELOCIRAPTOR_COUNT = 2;
+    private static final int TROODON_COUNT = 5;
+
     private final Scanner scanner;
+    private final Random random;
+    private List<Dinosaur> dinosaurs;
 
     public Game() {
         this.scanner = new Scanner(System.in);
+        this.random = new Random();
+        this.dinosaurs = new ArrayList<>();
     }
 
     public void start() {
@@ -48,22 +57,42 @@ public class Game {
 
     private void play() {
         Difficulty difficulty = chooseDifficulty();
-        Position initialPosition = new Position(0, 0);
+        Board board = new Board();
+        Position initialPosition = board.getInitialPlayerPosition();
         Player player = new Player(Player.INITIAL_HEALTH, difficulty.getPerception(), initialPosition);
 
-        Board board = new Board();
-        board.print(player);
+        board.placePlayer(player);
+        dinosaurs = createDinosaurs(board);
+        board.generateRandomWalls(random);
+
+        board.print();
         showPlayerStatus(player);
-        showTestDinosaurs(createTestDinosaurs());
+        showDinosaurStatus();
     }
 
-    private List<Dinosaur> createTestDinosaurs() {
-        List<Dinosaur> dinosaurs = new ArrayList<>();
-        dinosaurs.add(new Compsognathus(new Position(1, 1)));
-        dinosaurs.add(new Troodon(new Position(2, 2)));
-        dinosaurs.add(new Velociraptor(new Position(3, 3)));
-        dinosaurs.add(new TRex(new Position(4, 4)));
-        return dinosaurs;
+    private List<Dinosaur> createDinosaurs(Board board) {
+        List<Dinosaur> createdDinosaurs = new ArrayList<>();
+
+        addDinosaur(createdDinosaurs, new TRex(board.getOppositeCornerPosition()), board);
+
+        for (int count = 0; count < COMPSOGNATHUS_COUNT; count++) {
+            addDinosaur(createdDinosaurs, new Compsognathus(board.getRandomFreePosition(random)), board);
+        }
+
+        for (int count = 0; count < VELOCIRAPTOR_COUNT; count++) {
+            addDinosaur(createdDinosaurs, new Velociraptor(board.getRandomFreePosition(random)), board);
+        }
+
+        for (int count = 0; count < TROODON_COUNT; count++) {
+            addDinosaur(createdDinosaurs, new Troodon(board.getRandomFreePosition(random)), board);
+        }
+
+        return createdDinosaurs;
+    }
+
+    private void addDinosaur(List<Dinosaur> createdDinosaurs, Dinosaur dinosaur, Board board) {
+        board.placeDinosaur(dinosaur);
+        createdDinosaurs.add(dinosaur);
     }
 
     private Difficulty chooseDifficulty() {
@@ -99,14 +128,14 @@ public class Game {
         System.out.printf("Posicao atual: linha %d, coluna %d%n", position.getRow(), position.getColumn());
     }
 
-    private void showTestDinosaurs(List<Dinosaur> dinosaurs) {
-        System.out.println("Dinossauros de teste");
+    private void showDinosaurStatus() {
+        System.out.println("Dinossauros posicionados");
 
         for (Dinosaur dinosaur : dinosaurs) {
             Position position = dinosaur.getCurrentPosition();
 
             System.out.printf(
-                    "%s | simbolo: %s | saude: %d | posicao de teste: linha %d, coluna %d | descricao: %s%n",
+                    "%s | simbolo: %s | saude: %d | posicao: linha %d, coluna %d | descricao: %s%n",
                     dinosaur.getName(),
                     dinosaur.getVisualSymbol(),
                     dinosaur.getHealth(),
