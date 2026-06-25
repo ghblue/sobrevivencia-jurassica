@@ -68,6 +68,7 @@ public class Game {
         board.print();
         showPlayerStatus(player);
         showDinosaurStatus();
+        showMovementMenu(board, player);
     }
 
     private List<Dinosaur> createDinosaurs(Board board) {
@@ -126,6 +127,73 @@ public class Game {
         System.out.println("Saude: " + player.getHealth());
         System.out.println("Percepcao: " + player.getPerception());
         System.out.printf("Posicao atual: linha %d, coluna %d%n", position.getRow(), position.getColumn());
+    }
+
+    private void showMovementMenu(Board board, Player player) {
+        boolean playing = true;
+
+        while (playing) {
+            System.out.println("=== Menu ===");
+            System.out.println("1 - Mover para cima");
+            System.out.println("2 - Mover para baixo");
+            System.out.println("3 - Mover para esquerda");
+            System.out.println("4 - Mover para direita");
+            System.out.println("5 - Exibir mapa novamente");
+            System.out.println("0 - Encerrar jogo");
+            System.out.print("Escolha uma opcao: ");
+
+            String option = scanner.nextLine();
+
+            switch (option) {
+                case "1":
+                    handlePlayerMove(board, player, MovementDirection.UP);
+                    break;
+                case "2":
+                    handlePlayerMove(board, player, MovementDirection.DOWN);
+                    break;
+                case "3":
+                    handlePlayerMove(board, player, MovementDirection.LEFT);
+                    break;
+                case "4":
+                    handlePlayerMove(board, player, MovementDirection.RIGHT);
+                    break;
+                case "5":
+                    board.print();
+                    showPlayerStatus(player);
+                    break;
+                case "0":
+                    System.out.println("Jogo encerrado.");
+                    playing = false;
+                    break;
+                default:
+                    System.out.println("Opcao invalida.");
+                    break;
+            }
+        }
+    }
+
+    private void handlePlayerMove(Board board, Player player, MovementDirection direction) {
+        MoveResult result = board.movePlayer(player, direction);
+
+        switch (result) {
+            case SUCCESS:
+                board.print();
+                showPlayerStatus(player);
+                break;
+            case OUT_OF_BOUNDS:
+                System.out.println("Movimento invalido: voce sairia dos limites do tabuleiro.");
+                break;
+            case WALL:
+                System.out.println("Movimento invalido: ha uma parede nessa posicao.");
+                break;
+            case DINOSAUR:
+                System.out.println("Voce encontrou um dinossauro!");
+                System.out.println("(Combate sera implementado na proxima etapa.)");
+                break;
+            default:
+                System.out.println("Movimento invalido.");
+                break;
+        }
     }
 
     private void showDinosaurStatus() {

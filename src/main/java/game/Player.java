@@ -46,4 +46,8 @@ public class Player {
     public void setCurrentPosition(Position currentPosition) {
         this.currentPosition = Objects.requireNonNull(currentPosition, "A posicao atual e obrigatoria.");
     }
+
+    public void moveTo(Position newPosition) {
+        setCurrentPosition(newPosition);
+    }
 }

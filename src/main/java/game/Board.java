@@ -66,6 +66,31 @@ public class Board {
         placeElement(position, WALL_SYMBOL);
     }
 
+    public MoveResult movePlayer(Player player, MovementDirection direction) {
+        Objects.requireNonNull(player, "O jogador e obrigatorio.");
+        Objects.requireNonNull(direction, "A direcao e obrigatoria.");
+
+        Position currentPosition = player.getCurrentPosition();
+        Position nextPosition = direction.getNextPosition(currentPosition);
+
+        if (!isInsideBoard(nextPosition)) {
+            return MoveResult.OUT_OF_BOUNDS;
+        }
+
+        if (isWall(nextPosition)) {
+            return MoveResult.WALL;
+        }
+
+        if (isDinosaur(nextPosition)) {
+            return MoveResult.DINOSAUR;
+        }
+
+        clearPosition(currentPosition);
+        player.moveTo(nextPosition);
+        placeElement(nextPosition, PLAYER_SYMBOL);
+        return MoveResult.SUCCESS;
+    }
+
     public Position getRandomFreePosition(Random random) {
         Objects.requireNonNull(random, "O gerador aleatorio e obrigatorio.");
 
@@ -143,6 +168,12 @@ public class Board {
         occupiedPositions.add(position);
     }
 
+    private void clearPosition(Position position) {
+        validatePosition(position);
+        getCell(position).setSymbol(EMPTY_CELL_SYMBOL);
+        occupiedPositions.remove(position);
+    }
+
     private void validatePosition(Position position) {
         Objects.requireNonNull(position, "A posicao e obrigatoria.");
 
@@ -156,6 +187,18 @@ public class Board {
                 && position.getRow() < size
                 && position.getColumn() >= 0
                 && position.getColumn() < size;
+    }
+
+    private boolean isWall(Position position) {
+        return WALL_SYMBOL.equals(getCell(position).getSymbol());
+    }
+
+    private boolean isDinosaur(Position position) {
+        String symbol = getCell(position).getSymbol();
+        return Compsognathus.VISUAL_SYMBOL.equals(symbol)
+                || Troodon.VISUAL_SYMBOL.equals(symbol)
+                || Velociraptor.VISUAL_SYMBOL.equals(symbol)
+                || TRex.VISUAL_SYMBOL.equals(symbol);
     }
 
     private boolean hasFreePosition() {
