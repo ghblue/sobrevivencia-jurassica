@@ -3,6 +3,7 @@ package game;
 public class Board {
     public static final int DEFAULT_SIZE = 20;
     private static final String EMPTY_CELL_SYMBOL = ".";
+    private static final String PLAYER_SYMBOL = "P";
 
     private final int size;
     private final Cell[][] cells;
@@ -26,13 +27,17 @@ public class Board {
     }
 
     public void print() {
+        print(null);
+    }
+
+    public void print(Player player) {
         printColumnIndexes();
 
         for (int row = 0; row < size; row++) {
             System.out.printf("%2d ", row);
 
             for (int column = 0; column < size; column++) {
-                System.out.printf("%2s ", cells[row][column].getSymbol());
+                System.out.printf("%2s ", getSymbol(row, column, player));
             }
 
             System.out.println();
@@ -55,5 +60,22 @@ public class Board {
         }
 
         System.out.println();
+    }
+
+    private String getSymbol(int row, int column, Player player) {
+        if (isPlayerAt(row, column, player)) {
+            return PLAYER_SYMBOL;
+        }
+
+        return cells[row][column].getSymbol();
+    }
+
+    private boolean isPlayerAt(int row, int column, Player player) {
+        if (player == null) {
+            return false;
+        }
+
+        Position position = player.getCurrentPosition();
+        return position.getRow() == row && position.getColumn() == column;
     }
 }
