@@ -8,11 +8,17 @@ public class Player {
     private int health;
     private int perception;
     private Position currentPosition;
+    private int medicalKitCount;
+    private boolean hasElectricBaton;
+    private int tranquilizerAmmo;
 
     public Player(int health, int perception, Position currentPosition) {
         setHealth(health);
         setPerception(perception);
         setCurrentPosition(currentPosition);
+        this.medicalKitCount = 0;
+        this.hasElectricBaton = false;
+        this.tranquilizerAmmo = 0;
     }
 
     public int getHealth() {
@@ -49,5 +55,38 @@ public class Player {
 
     public void moveTo(Position newPosition) {
         setCurrentPosition(newPosition);
+    }
+
+    public int getMedicalKitCount() {
+        return medicalKitCount;
+    }
+
+    public boolean hasElectricBaton() {
+        return hasElectricBaton;
+    }
+
+    public int getTranquilizerAmmo() {
+        return tranquilizerAmmo;
+    }
+
+    public void addMedicalKit() {
+        medicalKitCount++;
+    }
+
+    public void addElectricBaton() {
+        hasElectricBaton = true;
+    }
+
+    public void addTranquilizerAmmo() {
+        tranquilizerAmmo++;
+    }
+
+    public String getInventoryStatus() {
+        return String.format(
+                "Kits medicos: %d%nPossui bastao eletrico: %s%nMunicoes de dardo: %d",
+                medicalKitCount,
+                hasElectricBaton ? "sim" : "nao",
+                tranquilizerAmmo
+        );
     }
 }

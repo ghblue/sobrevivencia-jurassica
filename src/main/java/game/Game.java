@@ -13,11 +13,13 @@ public class Game {
     private final Scanner scanner;
     private final Random random;
     private List<Dinosaur> dinosaurs;
+    private List<SupplyBox> supplyBoxes;
 
     public Game() {
         this.scanner = new Scanner(System.in);
         this.random = new Random();
         this.dinosaurs = new ArrayList<>();
+        this.supplyBoxes = new ArrayList<>();
     }
 
     public void start() {
@@ -64,6 +66,7 @@ public class Game {
         board.placePlayer(player);
         dinosaurs = createDinosaurs(board);
         board.generateRandomWalls(random);
+        supplyBoxes = createSupplyBoxes(board);
 
         board.print();
         showPlayerStatus(player);
@@ -91,9 +94,25 @@ public class Game {
         return createdDinosaurs;
     }
 
+    private List<SupplyBox> createSupplyBoxes(Board board) {
+        List<SupplyBox> createdSupplyBoxes = new ArrayList<>();
+
+        addSupplyBox(createdSupplyBoxes, new SupplyBox(board.getRandomFreePosition(random), new MedicalKit()), board);
+        addSupplyBox(createdSupplyBoxes, new SupplyBox(board.getRandomFreePosition(random), new ElectricBaton()), board);
+        addSupplyBox(createdSupplyBoxes, new SupplyBox(board.getRandomFreePosition(random), new TranquilizerGun()), board);
+        addSupplyBox(createdSupplyBoxes, new SupplyBox(board.getRandomFreePosition(random), new SurpriseCompsognathus()), board);
+
+        return createdSupplyBoxes;
+    }
+
     private void addDinosaur(List<Dinosaur> createdDinosaurs, Dinosaur dinosaur, Board board) {
         board.placeDinosaur(dinosaur);
         createdDinosaurs.add(dinosaur);
+    }
+
+    private void addSupplyBox(List<SupplyBox> createdSupplyBoxes, SupplyBox supplyBox, Board board) {
+        board.placeSupplyBox(supplyBox);
+        createdSupplyBoxes.add(supplyBox);
     }
 
     private Difficulty chooseDifficulty() {
@@ -127,6 +146,7 @@ public class Game {
         System.out.println("Saude: " + player.getHealth());
         System.out.println("Percepcao: " + player.getPerception());
         System.out.printf("Posicao atual: linha %d, coluna %d%n", position.getRow(), position.getColumn());
+        System.out.println(player.getInventoryStatus());
     }
 
     private void showMovementMenu(Board board, Player player) {
@@ -190,10 +210,32 @@ public class Game {
                 System.out.println("Voce encontrou um dinossauro!");
                 System.out.println("(Combate sera implementado na proxima etapa.)");
                 break;
+            case SUPPLY_BOX:
+                collectSupplyBoxAt(player.getCurrentPosition(), player);
+                board.print();
+                showPlayerStatus(player);
+                break;
             default:
                 System.out.println("Movimento invalido.");
                 break;
         }
+    }
+
+    private void collectSupplyBoxAt(Position position, Player player) {
+        for (int index = 0; index < supplyBoxes.size(); index++) {
+            SupplyBox supplyBox = supplyBoxes.get(index);
+
+            if (supplyBox.getPosition().equals(position)) {
+                Item item = supplyBox.getContent();
+                System.out.println("Voce encontrou uma caixa de suprimentos!");
+                System.out.println("Conteudo: " + item.getName());
+                System.out.println(item.applyTo(player));
+                supplyBoxes.remove(index);
+                return;
+            }
+        }
+
+        System.out.println("Voce encontrou uma caixa de suprimentos, mas o conteudo nao foi localizado.");
     }
 
     private void showDinosaurStatus() {

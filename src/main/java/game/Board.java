@@ -66,6 +66,11 @@ public class Board {
         placeElement(position, WALL_SYMBOL);
     }
 
+    public void placeSupplyBox(SupplyBox supplyBox) {
+        Objects.requireNonNull(supplyBox, "A caixa de suprimentos e obrigatoria.");
+        placeElement(supplyBox.getPosition(), SupplyBox.VISUAL_SYMBOL);
+    }
+
     public MoveResult movePlayer(Player player, MovementDirection direction) {
         Objects.requireNonNull(player, "O jogador e obrigatorio.");
         Objects.requireNonNull(direction, "A direcao e obrigatoria.");
@@ -85,9 +90,12 @@ public class Board {
             return MoveResult.DINOSAUR;
         }
 
-        clearPosition(currentPosition);
-        player.moveTo(nextPosition);
-        placeElement(nextPosition, PLAYER_SYMBOL);
+        if (isSupplyBox(nextPosition)) {
+            movePlayerTo(player, currentPosition, nextPosition);
+            return MoveResult.SUPPLY_BOX;
+        }
+
+        movePlayerTo(player, currentPosition, nextPosition);
         return MoveResult.SUCCESS;
     }
 
@@ -154,11 +162,7 @@ public class Board {
 
     private void placeElement(Position position, String symbol) {
         validatePosition(position);
-        Objects.requireNonNull(symbol, "O simbolo e obrigatorio.");
-
-        if (symbol.isEmpty()) {
-            throw new IllegalArgumentException("O simbolo nao pode ser vazio.");
-        }
+        validateSymbol(symbol);
 
         if (occupiedPositions.contains(position)) {
             throw new IllegalArgumentException("A posicao ja esta ocupada.");
@@ -168,10 +172,31 @@ public class Board {
         occupiedPositions.add(position);
     }
 
+    private void movePlayerTo(Player player, Position currentPosition, Position nextPosition) {
+        clearPosition(currentPosition);
+        player.moveTo(nextPosition);
+        replaceElement(nextPosition, PLAYER_SYMBOL);
+    }
+
+    private void replaceElement(Position position, String symbol) {
+        validatePosition(position);
+        validateSymbol(symbol);
+        getCell(position).setSymbol(symbol);
+        occupiedPositions.add(position);
+    }
+
     private void clearPosition(Position position) {
         validatePosition(position);
         getCell(position).setSymbol(EMPTY_CELL_SYMBOL);
         occupiedPositions.remove(position);
+    }
+
+    private void validateSymbol(String symbol) {
+        Objects.requireNonNull(symbol, "O simbolo e obrigatorio.");
+
+        if (symbol.isEmpty()) {
+            throw new IllegalArgumentException("O simbolo nao pode ser vazio.");
+        }
     }
 
     private void validatePosition(Position position) {
@@ -199,6 +224,10 @@ public class Board {
                 || Troodon.VISUAL_SYMBOL.equals(symbol)
                 || Velociraptor.VISUAL_SYMBOL.equals(symbol)
                 || TRex.VISUAL_SYMBOL.equals(symbol);
+    }
+
+    private boolean isSupplyBox(Position position) {
+        return SupplyBox.VISUAL_SYMBOL.equals(getCell(position).getSymbol());
     }
 
     private boolean hasFreePosition() {
