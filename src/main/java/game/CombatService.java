@@ -160,7 +160,7 @@ public class CombatService {
     }
 
     private void printHealthStatus(Player player, Dinosaur dinosaur) {
-        System.out.println("Saude do jogador: " + player.getHealth());
+        System.out.printf("Saude do jogador: %d/%d%n", player.getHealth(), player.getMaxHealth());
         System.out.println("Saude do dinossauro: " + dinosaur.getHealth());
     }
 }

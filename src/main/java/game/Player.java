@@ -6,6 +6,7 @@ public class Player {
     public static final int INITIAL_HEALTH = 5;
 
     private int health;
+    private final int maxHealth;
     private int perception;
     private Position currentPosition;
     private int medicalKitCount;
@@ -13,7 +14,12 @@ public class Player {
     private int tranquilizerAmmo;
 
     public Player(int health, int perception, Position currentPosition) {
-        setHealth(health);
+        if (health <= 0) {
+            throw new IllegalArgumentException("A saude inicial deve ser positiva.");
+        }
+
+        this.maxHealth = health;
+        this.health = health;
         setPerception(perception);
         setCurrentPosition(currentPosition);
         this.medicalKitCount = 0;
@@ -25,12 +31,16 @@ public class Player {
         return health;
     }
 
-    public void setHealth(int health) {
+    public int getMaxHealth() {
+        return maxHealth;
+    }
+
+    private void setHealth(int health) {
         if (health < 0) {
             throw new IllegalArgumentException("A saude nao pode ser negativa.");
         }
 
-        this.health = health;
+        this.health = Math.min(health, maxHealth);
     }
 
     public boolean isAlive() {
@@ -43,6 +53,14 @@ public class Player {
         }
 
         setHealth(Math.max(0, health - damage));
+    }
+
+    public void heal(int amount) {
+        if (amount < 0) {
+            throw new IllegalArgumentException("A cura nao pode ser negativa.");
+        }
+
+        setHealth(health + amount);
     }
 
     public int getPerception() {
@@ -73,6 +91,10 @@ public class Player {
         return medicalKitCount;
     }
 
+    public boolean hasMedicalKit() {
+        return medicalKitCount > 0;
+    }
+
     public boolean hasElectricBaton() {
         return hasElectricBaton;
     }
@@ -83,6 +105,21 @@ public class Player {
 
     public void addMedicalKit() {
         medicalKitCount++;
+    }
+
+    public int useMedicalKit(int healingAmount) {
+        if (healingAmount < 0) {
+            throw new IllegalArgumentException("A cura nao pode ser negativa.");
+        }
+
+        if (!hasMedicalKit()) {
+            throw new IllegalStateException("Nao ha kit medico disponivel.");
+        }
+
+        int previousHealth = health;
+        medicalKitCount--;
+        heal(healingAmount);
+        return health - previousHealth;
     }
 
     public void addElectricBaton() {
@@ -103,7 +140,7 @@ public class Player {
 
     public String getInventoryStatus() {
         return String.format(
-                "Kits medicos: %d%nPossui bastao eletrico: %s%nMunicoes de dardo: %d",
+                "Kits medicos: %d%nBastao eletrico: %s%nMunicoes de dardo: %d",
                 medicalKitCount,
                 hasElectricBaton ? "sim" : "nao",
                 tranquilizerAmmo

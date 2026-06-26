@@ -9,12 +9,14 @@ public class Game {
     private static final int COMPSOGNATHUS_COUNT = 2;
     private static final int VELOCIRAPTOR_COUNT = 2;
     private static final int TROODON_COUNT = 5;
+    private static final int MEDICAL_KIT_HEALING = 1;
 
     private final Scanner scanner;
     private final Random random;
     private final CombatService combatService;
     private List<Dinosaur> dinosaurs;
     private List<SupplyBox> supplyBoxes;
+    private GameStatus gameStatus;
 
     public Game() {
         this.scanner = new Scanner(System.in);
@@ -22,6 +24,7 @@ public class Game {
         this.combatService = new CombatService(scanner, new Dice(random));
         this.dinosaurs = new ArrayList<>();
         this.supplyBoxes = new ArrayList<>();
+        this.gameStatus = GameStatus.EXITED;
     }
 
     public void start() {
@@ -67,6 +70,7 @@ public class Game {
         Position initialPosition = board.getInitialPlayerPosition();
         Player player = new Player(Player.INITIAL_HEALTH, difficulty.getPerception(), initialPosition);
 
+        gameStatus = GameStatus.RUNNING;
         board.placePlayer(player);
         dinosaurs = createDinosaurs(board);
         board.generateRandomWalls(random);
@@ -75,7 +79,8 @@ public class Game {
         board.print();
         showPlayerStatus(player);
         showDinosaurStatus();
-        return showMovementMenu(board, player);
+        showMovementMenu(board, player);
+        return gameStatus == GameStatus.EXITED;
     }
 
     private List<Dinosaur> createDinosaurs(Board board) {
@@ -147,23 +152,22 @@ public class Game {
         Position position = player.getCurrentPosition();
 
         System.out.println("Status do jogador");
-        System.out.println("Saude: " + player.getHealth());
+        System.out.println("Saude atual: " + player.getHealth());
+        System.out.println("Saude maxima: " + player.getMaxHealth());
         System.out.println("Percepcao: " + player.getPerception());
         System.out.printf("Posicao atual: linha %d, coluna %d%n", position.getRow(), position.getColumn());
         System.out.println(player.getInventoryStatus());
     }
 
-    private boolean showMovementMenu(Board board, Player player) {
-        boolean playing = true;
-        boolean playerSurvived = true;
-
-        while (playing) {
+    private void showMovementMenu(Board board, Player player) {
+        while (isGameRunning()) {
             System.out.println("=== Menu ===");
             System.out.println("1 - Mover para cima");
             System.out.println("2 - Mover para baixo");
             System.out.println("3 - Mover para esquerda");
             System.out.println("4 - Mover para direita");
             System.out.println("5 - Exibir mapa novamente");
+            System.out.println("6 - Usar kit medico");
             System.out.println("0 - Encerrar jogo");
             System.out.print("Escolha uma opcao: ");
 
@@ -171,39 +175,35 @@ public class Game {
 
             switch (option) {
                 case "1":
-                    playing = handlePlayerMove(board, player, MovementDirection.UP);
-                    playerSurvived = player.isAlive();
+                    handlePlayerMove(board, player, MovementDirection.UP);
                     break;
                 case "2":
-                    playing = handlePlayerMove(board, player, MovementDirection.DOWN);
-                    playerSurvived = player.isAlive();
+                    handlePlayerMove(board, player, MovementDirection.DOWN);
                     break;
                 case "3":
-                    playing = handlePlayerMove(board, player, MovementDirection.LEFT);
-                    playerSurvived = player.isAlive();
+                    handlePlayerMove(board, player, MovementDirection.LEFT);
                     break;
                 case "4":
-                    playing = handlePlayerMove(board, player, MovementDirection.RIGHT);
-                    playerSurvived = player.isAlive();
+                    handlePlayerMove(board, player, MovementDirection.RIGHT);
                     break;
                 case "5":
                     board.print();
                     showPlayerStatus(player);
                     break;
+                case "6":
+                    handleMedicalKitUse(player);
+                    break;
                 case "0":
-                    System.out.println("Jogo encerrado.");
-                    playing = false;
+                    endGame(GameStatus.EXITED);
                     break;
                 default:
                     System.out.println("Opcao invalida.");
                     break;
             }
         }
-
-        return playerSurvived;
     }
 
-    private boolean handlePlayerMove(Board board, Player player, MovementDirection direction) {
+    private void handlePlayerMove(Board board, Player player, MovementDirection direction) {
         Position targetPosition = direction.getNextPosition(player.getCurrentPosition());
         MoveResult result = board.movePlayer(player, direction);
 
@@ -211,32 +211,35 @@ public class Game {
             case SUCCESS:
                 board.print();
                 showPlayerStatus(player);
-                return true;
+                finishPlayerTurn(player);
+                break;
             case OUT_OF_BOUNDS:
                 System.out.println("Movimento invalido: voce sairia dos limites do tabuleiro.");
-                return true;
+                break;
             case WALL:
                 System.out.println("Movimento invalido: ha uma parede nessa posicao.");
-                return true;
+                break;
             case DINOSAUR:
-                return handleCombat(board, player, targetPosition);
+                handleCombat(board, player, targetPosition);
+                break;
             case SUPPLY_BOX:
                 collectSupplyBoxAt(player.getCurrentPosition(), player);
                 board.print();
                 showPlayerStatus(player);
-                return true;
+                finishPlayerTurn(player);
+                break;
             default:
                 System.out.println("Movimento invalido.");
-                return true;
+                break;
         }
     }
 
-    private boolean handleCombat(Board board, Player player, Position targetPosition) {
+    private void handleCombat(Board board, Player player, Position targetPosition) {
         Dinosaur dinosaur = findDinosaurAt(targetPosition);
 
         if (dinosaur == null) {
             System.out.println("Voce encontrou um dinossauro, mas ele nao foi localizado na lista ativa.");
-            return true;
+            return;
         }
 
         CombatResult result = combatService.startCombat(player, dinosaur);
@@ -248,16 +251,88 @@ public class Game {
                 System.out.println("Vitoria no combate.");
                 board.print();
                 showPlayerStatus(player);
-                return true;
+                finishPlayerTurn(player);
+                break;
             case PLAYER_DEFEATED:
-                System.out.println("Derrota. O jogo foi encerrado.");
-                return false;
+                showPlayerStatus(player);
+                updateGameStatus(player);
+                break;
             case FLED:
                 board.print();
                 showPlayerStatus(player);
-                return true;
+                finishPlayerTurn(player);
+                break;
             default:
-                return true;
+                break;
+        }
+    }
+
+    private void handleMedicalKitUse(Player player) {
+        if (!player.hasMedicalKit()) {
+            System.out.println("Voce nao possui kit medico.");
+            showPlayerStatus(player);
+            return;
+        }
+
+        int recoveredHealth = player.useMedicalKit(MEDICAL_KIT_HEALING);
+        System.out.println("Voce usou um kit medico.");
+
+        if (recoveredHealth > 0) {
+            System.out.println("Saude recuperada: " + recoveredHealth);
+        } else {
+            System.out.println("Sua saude ja estava no maximo.");
+        }
+
+        showPlayerStatus(player);
+        finishPlayerTurn(player);
+    }
+
+    private void finishPlayerTurn(Player player) {
+        // A movimentacao dos dinossauros sera chamada aqui em uma etapa futura.
+        updateGameStatus(player);
+    }
+
+    private void updateGameStatus(Player player) {
+        if (!isGameRunning()) {
+            return;
+        }
+
+        if (!player.isAlive()) {
+            endGame(GameStatus.DEFEAT);
+            return;
+        }
+
+        if (dinosaurs.isEmpty()) {
+            endGame(GameStatus.VICTORY);
+        }
+    }
+
+    private boolean isGameRunning() {
+        return gameStatus == GameStatus.RUNNING;
+    }
+
+    private void endGame(GameStatus finalStatus) {
+        if (!isGameRunning()) {
+            return;
+        }
+
+        gameStatus = finalStatus;
+
+        switch (finalStatus) {
+            case VICTORY:
+                System.out.println("Vitoria! Todos os dinossauros foram derrotados.");
+                System.out.println("Partida finalizada com vitoria.");
+                break;
+            case DEFEAT:
+                System.out.println("Derrota. Sua saude chegou a 0.");
+                System.out.println("Partida finalizada com derrota.");
+                break;
+            case EXITED:
+                System.out.println("Jogo encerrado pelo jogador.");
+                System.out.println("Partida finalizada.");
+                break;
+            default:
+                break;
         }
     }
 
