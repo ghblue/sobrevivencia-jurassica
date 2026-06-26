@@ -12,12 +12,14 @@ public class Game {
 
     private final Scanner scanner;
     private final Random random;
+    private final CombatService combatService;
     private List<Dinosaur> dinosaurs;
     private List<SupplyBox> supplyBoxes;
 
     public Game() {
         this.scanner = new Scanner(System.in);
         this.random = new Random();
+        this.combatService = new CombatService(scanner, new Dice(random));
         this.dinosaurs = new ArrayList<>();
         this.supplyBoxes = new ArrayList<>();
     }
@@ -44,7 +46,9 @@ public class Game {
 
             switch (option) {
                 case "1":
-                    play();
+                    if (!play()) {
+                        running = false;
+                    }
                     break;
                 case "2":
                     System.out.println("Saindo do jogo.");
@@ -57,7 +61,7 @@ public class Game {
         }
     }
 
-    private void play() {
+    private boolean play() {
         Difficulty difficulty = chooseDifficulty();
         Board board = new Board();
         Position initialPosition = board.getInitialPlayerPosition();
@@ -71,7 +75,7 @@ public class Game {
         board.print();
         showPlayerStatus(player);
         showDinosaurStatus();
-        showMovementMenu(board, player);
+        return showMovementMenu(board, player);
     }
 
     private List<Dinosaur> createDinosaurs(Board board) {
@@ -149,8 +153,9 @@ public class Game {
         System.out.println(player.getInventoryStatus());
     }
 
-    private void showMovementMenu(Board board, Player player) {
+    private boolean showMovementMenu(Board board, Player player) {
         boolean playing = true;
+        boolean playerSurvived = true;
 
         while (playing) {
             System.out.println("=== Menu ===");
@@ -166,16 +171,20 @@ public class Game {
 
             switch (option) {
                 case "1":
-                    handlePlayerMove(board, player, MovementDirection.UP);
+                    playing = handlePlayerMove(board, player, MovementDirection.UP);
+                    playerSurvived = player.isAlive();
                     break;
                 case "2":
-                    handlePlayerMove(board, player, MovementDirection.DOWN);
+                    playing = handlePlayerMove(board, player, MovementDirection.DOWN);
+                    playerSurvived = player.isAlive();
                     break;
                 case "3":
-                    handlePlayerMove(board, player, MovementDirection.LEFT);
+                    playing = handlePlayerMove(board, player, MovementDirection.LEFT);
+                    playerSurvived = player.isAlive();
                     break;
                 case "4":
-                    handlePlayerMove(board, player, MovementDirection.RIGHT);
+                    playing = handlePlayerMove(board, player, MovementDirection.RIGHT);
+                    playerSurvived = player.isAlive();
                     break;
                 case "5":
                     board.print();
@@ -190,35 +199,76 @@ public class Game {
                     break;
             }
         }
+
+        return playerSurvived;
     }
 
-    private void handlePlayerMove(Board board, Player player, MovementDirection direction) {
+    private boolean handlePlayerMove(Board board, Player player, MovementDirection direction) {
+        Position targetPosition = direction.getNextPosition(player.getCurrentPosition());
         MoveResult result = board.movePlayer(player, direction);
 
         switch (result) {
             case SUCCESS:
                 board.print();
                 showPlayerStatus(player);
-                break;
+                return true;
             case OUT_OF_BOUNDS:
                 System.out.println("Movimento invalido: voce sairia dos limites do tabuleiro.");
-                break;
+                return true;
             case WALL:
                 System.out.println("Movimento invalido: ha uma parede nessa posicao.");
-                break;
+                return true;
             case DINOSAUR:
-                System.out.println("Voce encontrou um dinossauro!");
-                System.out.println("(Combate sera implementado na proxima etapa.)");
-                break;
+                return handleCombat(board, player, targetPosition);
             case SUPPLY_BOX:
                 collectSupplyBoxAt(player.getCurrentPosition(), player);
                 board.print();
                 showPlayerStatus(player);
-                break;
+                return true;
             default:
                 System.out.println("Movimento invalido.");
-                break;
+                return true;
         }
+    }
+
+    private boolean handleCombat(Board board, Player player, Position targetPosition) {
+        Dinosaur dinosaur = findDinosaurAt(targetPosition);
+
+        if (dinosaur == null) {
+            System.out.println("Voce encontrou um dinossauro, mas ele nao foi localizado na lista ativa.");
+            return true;
+        }
+
+        CombatResult result = combatService.startCombat(player, dinosaur);
+
+        switch (result) {
+            case PLAYER_WON:
+                dinosaurs.remove(dinosaur);
+                board.movePlayerToDefeatedDinosaurPosition(player, dinosaur);
+                System.out.println("Vitoria no combate.");
+                board.print();
+                showPlayerStatus(player);
+                return true;
+            case PLAYER_DEFEATED:
+                System.out.println("Derrota. O jogo foi encerrado.");
+                return false;
+            case FLED:
+                board.print();
+                showPlayerStatus(player);
+                return true;
+            default:
+                return true;
+        }
+    }
+
+    private Dinosaur findDinosaurAt(Position position) {
+        for (Dinosaur dinosaur : dinosaurs) {
+            if (dinosaur.getCurrentPosition().equals(position)) {
+                return dinosaur;
+            }
+        }
+
+        return null;
     }
 
     private void collectSupplyBoxAt(Position position, Player player) {

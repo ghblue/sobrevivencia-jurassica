@@ -1,0 +1,166 @@
+package game;
+
+import java.util.Objects;
+import java.util.Scanner;
+
+public class CombatService {
+    private final Scanner scanner;
+    private final Dice dice;
+
+    public CombatService(Scanner scanner, Dice dice) {
+        this.scanner = Objects.requireNonNull(scanner, "O leitor de entrada e obrigatorio.");
+        this.dice = Objects.requireNonNull(dice, "O dado e obrigatorio.");
+    }
+
+    public CombatResult startCombat(Player player, Dinosaur dinosaur) {
+        Objects.requireNonNull(player, "O jogador e obrigatorio.");
+        Objects.requireNonNull(dinosaur, "O dinossauro e obrigatorio.");
+
+        System.out.println("Voce encontrou um dinossauro!");
+        System.out.println("Dinossauro encontrado: " + dinosaur.getName());
+        printHealthStatus(player, dinosaur);
+
+        while (player.isAlive() && dinosaur.isAlive()) {
+            int damage = choosePlayerAction(player, dinosaur);
+
+            if (damage < 0) {
+                System.out.println("Voce fugiu do combate.");
+                return CombatResult.FLED;
+            }
+
+            if (damage > 0) {
+                dinosaur.takeDamage(damage);
+                System.out.println("Voce causou " + damage + " de dano.");
+            } else {
+                System.out.println("Voce nao causou dano.");
+            }
+
+            if (!dinosaur.isAlive()) {
+                System.out.println("Voce derrotou o " + dinosaur.getName() + ".");
+                return CombatResult.PLAYER_WON;
+            }
+
+            dinosaurCounterAttack(player, dinosaur);
+            printHealthStatus(player, dinosaur);
+        }
+
+        return player.isAlive() ? CombatResult.PLAYER_WON : CombatResult.PLAYER_DEFEATED;
+    }
+
+    private int choosePlayerAction(Player player, Dinosaur dinosaur) {
+        while (true) {
+            showAttackMenu(player);
+            String option = scanner.nextLine();
+
+            switch (option) {
+                case "1":
+                    return attackWithHands(dinosaur);
+                case "2":
+                    if (!player.hasElectricBaton()) {
+                        System.out.println("Opcao indisponivel: voce nao possui bastao eletrico.");
+                        break;
+                    }
+
+                    return attackWithElectricBaton();
+                case "3":
+                    if (player.getTranquilizerAmmo() <= 0) {
+                        System.out.println("Opcao indisponivel: voce nao possui municao de dardo.");
+                        break;
+                    }
+
+                    return attackWithTranquilizerGun(player, dinosaur);
+                case "0":
+                    return -1;
+                default:
+                    System.out.println("Opcao invalida.");
+                    break;
+            }
+        }
+    }
+
+    private void showAttackMenu(Player player) {
+        System.out.println("Escolha sua acao:");
+        System.out.println("1 - Atacar com as maos");
+
+        if (player.hasElectricBaton()) {
+            System.out.println("2 - Atacar com bastao eletrico");
+        }
+
+        if (player.getTranquilizerAmmo() > 0) {
+            System.out.println("3 - Atacar com arma de dardos");
+        }
+
+        System.out.println("0 - Fugir");
+        System.out.print("Opcao: ");
+    }
+
+    private int attackWithHands(Dinosaur dinosaur) {
+        int roll = dice.rollD6();
+        System.out.println("Dado de ataque: " + roll);
+
+        if (dinosaur instanceof TRex) {
+            System.out.println("O ataque com as maos nao surtiu efeito contra o T-Rex.");
+            return 0;
+        }
+
+        if (roll == 6) {
+            return 2;
+        }
+
+        if (roll == 1 || roll == 2) {
+            return 0;
+        }
+
+        return 1;
+    }
+
+    private int attackWithElectricBaton() {
+        int roll = dice.rollD6();
+        System.out.println("Dado de ataque: " + roll);
+
+        if (roll > 5) {
+            return 2;
+        }
+
+        if (roll == 1) {
+            return 0;
+        }
+
+        return 1;
+    }
+
+    private int attackWithTranquilizerGun(Player player, Dinosaur dinosaur) {
+        player.useTranquilizerAmmo();
+        System.out.println("Voce gastou 1 municao de dardo.");
+
+        if (dinosaur instanceof Velociraptor) {
+            System.out.println("O Velociraptor desviou do dardo.");
+            return 0;
+        }
+
+        return 2;
+    }
+
+    private void dinosaurCounterAttack(Player player, Dinosaur dinosaur) {
+        int roll = dice.rollD3();
+        System.out.println("Teste de percepcao: " + roll);
+
+        if (roll <= player.getPerception()) {
+            System.out.println("Voce desviou do contra-ataque.");
+            return;
+        }
+
+        int damage = dinosaur instanceof TRex ? 2 : 1;
+        player.takeDamage(damage);
+        System.out.println(dinosaur.getName() + " causou " + damage + " de dano.");
+
+        if (!player.isAlive()) {
+            System.out.println("Voce foi derrotado.");
+        }
+    }
+
+    private void printHealthStatus(Player player, Dinosaur dinosaur) {
+        System.out.println("Saude do jogador: " + player.getHealth());
+        System.out.println("Saude do dinossauro: " + dinosaur.getHealth());
+    }
+}

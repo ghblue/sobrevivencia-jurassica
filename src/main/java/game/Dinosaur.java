@@ -47,5 +47,13 @@ public abstract class Dinosaur {
         return health > 0;
     }
 
+    public void takeDamage(int damage) {
+        if (damage < 0) {
+            throw new IllegalArgumentException("O dano nao pode ser negativo.");
+        }
+
+        setHealth(Math.max(0, health - damage));
+    }
+
     public abstract String getDescription();
 }

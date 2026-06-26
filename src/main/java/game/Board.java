@@ -99,6 +99,19 @@ public class Board {
         return MoveResult.SUCCESS;
     }
 
+    public void movePlayerToDefeatedDinosaurPosition(Player player, Dinosaur dinosaur) {
+        Objects.requireNonNull(player, "O jogador e obrigatorio.");
+        Objects.requireNonNull(dinosaur, "O dinossauro e obrigatorio.");
+
+        Position currentPosition = player.getCurrentPosition();
+        Position dinosaurPosition = dinosaur.getCurrentPosition();
+
+        clearPosition(currentPosition);
+        clearPosition(dinosaurPosition);
+        player.moveTo(dinosaurPosition);
+        placeElement(dinosaurPosition, PLAYER_SYMBOL);
+    }
+
     public Position getRandomFreePosition(Random random) {
         Objects.requireNonNull(random, "O gerador aleatorio e obrigatorio.");
 

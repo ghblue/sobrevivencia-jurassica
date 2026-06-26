@@ -33,6 +33,18 @@ public class Player {
         this.health = health;
     }
 
+    public boolean isAlive() {
+        return health > 0;
+    }
+
+    public void takeDamage(int damage) {
+        if (damage < 0) {
+            throw new IllegalArgumentException("O dano nao pode ser negativo.");
+        }
+
+        setHealth(Math.max(0, health - damage));
+    }
+
     public int getPerception() {
         return perception;
     }
@@ -79,6 +91,14 @@ public class Player {
 
     public void addTranquilizerAmmo() {
         tranquilizerAmmo++;
+    }
+
+    public void useTranquilizerAmmo() {
+        if (tranquilizerAmmo <= 0) {
+            throw new IllegalStateException("Nao ha municao de dardo disponivel.");
+        }
+
+        tranquilizerAmmo--;
     }
 
     public String getInventoryStatus() {
