@@ -13,12 +13,30 @@ public class CombatService {
     }
 
     public CombatResult startCombat(Player player, Dinosaur dinosaur) {
+        return startCombat(player, dinosaur, false);
+    }
+
+    public CombatResult startCombat(Player player, Dinosaur dinosaur, boolean dinosaurStarts) {
         Objects.requireNonNull(player, "O jogador e obrigatorio.");
         Objects.requireNonNull(dinosaur, "O dinossauro e obrigatorio.");
 
-        System.out.println("Voce encontrou um dinossauro!");
+        if (dinosaurStarts) {
+            System.out.println("Um dinossauro iniciou o combate!");
+        } else {
+            System.out.println("Voce encontrou um dinossauro!");
+        }
+
         System.out.println("Dinossauro encontrado: " + dinosaur.getName());
         printHealthStatus(player, dinosaur);
+
+        if (dinosaurStarts) {
+            dinosaurAttack(player, dinosaur);
+            printHealthStatus(player, dinosaur);
+
+            if (!player.isAlive()) {
+                return CombatResult.PLAYER_DEFEATED;
+            }
+        }
 
         while (player.isAlive() && dinosaur.isAlive()) {
             int damage = choosePlayerAction(player, dinosaur);
@@ -40,7 +58,7 @@ public class CombatService {
                 return CombatResult.PLAYER_WON;
             }
 
-            dinosaurCounterAttack(player, dinosaur);
+            dinosaurAttack(player, dinosaur);
             printHealthStatus(player, dinosaur);
         }
 
@@ -141,12 +159,12 @@ public class CombatService {
         return 2;
     }
 
-    private void dinosaurCounterAttack(Player player, Dinosaur dinosaur) {
+    private void dinosaurAttack(Player player, Dinosaur dinosaur) {
         int roll = dice.rollD3();
         System.out.println("Teste de percepcao: " + roll);
 
         if (roll <= player.getPerception()) {
-            System.out.println("Voce desviou do contra-ataque.");
+            System.out.println("Voce desviou do ataque.");
             return;
         }
 

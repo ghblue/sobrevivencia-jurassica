@@ -14,6 +14,7 @@ public class Game {
     private final Scanner scanner;
     private final Random random;
     private final CombatService combatService;
+    private final DinosaurMovementService dinosaurMovementService;
     private List<Dinosaur> dinosaurs;
     private List<SupplyBox> supplyBoxes;
     private GameStatus gameStatus;
@@ -22,6 +23,7 @@ public class Game {
         this.scanner = new Scanner(System.in);
         this.random = new Random();
         this.combatService = new CombatService(scanner, new Dice(random));
+        this.dinosaurMovementService = new DinosaurMovementService(random, combatService);
         this.dinosaurs = new ArrayList<>();
         this.supplyBoxes = new ArrayList<>();
         this.gameStatus = GameStatus.EXITED;
@@ -191,7 +193,7 @@ public class Game {
                     showPlayerStatus(player);
                     break;
                 case "6":
-                    handleMedicalKitUse(player);
+                    handleMedicalKitUse(board, player);
                     break;
                 case "0":
                     endGame(GameStatus.EXITED);
@@ -211,7 +213,7 @@ public class Game {
             case SUCCESS:
                 board.print();
                 showPlayerStatus(player);
-                finishPlayerTurn(player);
+                finishPlayerTurn(board, player);
                 break;
             case OUT_OF_BOUNDS:
                 System.out.println("Movimento invalido: voce sairia dos limites do tabuleiro.");
@@ -223,10 +225,10 @@ public class Game {
                 handleCombat(board, player, targetPosition);
                 break;
             case SUPPLY_BOX:
-                collectSupplyBoxAt(player.getCurrentPosition(), player);
+                collectSupplyBoxAt(player.getCurrentPosition(), player, board);
                 board.print();
                 showPlayerStatus(player);
-                finishPlayerTurn(player);
+                finishPlayerTurn(board, player);
                 break;
             default:
                 System.out.println("Movimento invalido.");
@@ -251,7 +253,7 @@ public class Game {
                 System.out.println("Vitoria no combate.");
                 board.print();
                 showPlayerStatus(player);
-                finishPlayerTurn(player);
+                finishPlayerTurn(board, player);
                 break;
             case PLAYER_DEFEATED:
                 showPlayerStatus(player);
@@ -260,14 +262,14 @@ public class Game {
             case FLED:
                 board.print();
                 showPlayerStatus(player);
-                finishPlayerTurn(player);
+                finishPlayerTurn(board, player);
                 break;
             default:
                 break;
         }
     }
 
-    private void handleMedicalKitUse(Player player) {
+    private void handleMedicalKitUse(Board board, Player player) {
         if (!player.hasMedicalKit()) {
             System.out.println("Voce nao possui kit medico.");
             showPlayerStatus(player);
@@ -284,11 +286,20 @@ public class Game {
         }
 
         showPlayerStatus(player);
-        finishPlayerTurn(player);
+        finishPlayerTurn(board, player);
     }
 
-    private void finishPlayerTurn(Player player) {
-        // A movimentacao dos dinossauros sera chamada aqui em uma etapa futura.
+    private void finishPlayerTurn(Board board, Player player) {
+        updateGameStatus(player);
+
+        if (!isGameRunning()) {
+            return;
+        }
+
+        System.out.println("Turno dos dinossauros.");
+        dinosaurMovementService.moveDinosaurs(board, player, dinosaurs);
+        board.print();
+        showPlayerStatus(player);
         updateGameStatus(player);
     }
 
@@ -346,7 +357,7 @@ public class Game {
         return null;
     }
 
-    private void collectSupplyBoxAt(Position position, Player player) {
+    private void collectSupplyBoxAt(Position position, Player player, Board board) {
         for (int index = 0; index < supplyBoxes.size(); index++) {
             SupplyBox supplyBox = supplyBoxes.get(index);
 
@@ -356,6 +367,7 @@ public class Game {
                 System.out.println("Conteudo: " + item.getName());
                 System.out.println(item.applyTo(player));
                 supplyBoxes.remove(index);
+                board.removeSupplyBoxAt(position);
                 return;
             }
         }

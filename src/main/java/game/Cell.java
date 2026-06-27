@@ -3,17 +3,41 @@ package game;
 import java.util.Objects;
 
 public class Cell {
-    private String symbol;
+    private final String emptySymbol;
+    private String primarySymbol;
+    private String secondarySymbol;
 
     public Cell(String symbol) {
-        setSymbol(symbol);
+        this.emptySymbol = Objects.requireNonNull(symbol, "O simbolo vazio e obrigatorio.");
+        this.primarySymbol = symbol;
+        this.secondarySymbol = symbol;
     }
 
     public String getSymbol() {
-        return symbol;
+        if (!emptySymbol.equals(primarySymbol)) {
+            return primarySymbol;
+        }
+
+        return secondarySymbol;
     }
 
     public void setSymbol(String symbol) {
-        this.symbol = Objects.requireNonNull(symbol, "O simbolo e obrigatorio.");
+        setPrimarySymbol(symbol);
+    }
+
+    public String getPrimarySymbol() {
+        return primarySymbol;
+    }
+
+    public String getSecondarySymbol() {
+        return secondarySymbol;
+    }
+
+    public void setPrimarySymbol(String symbol) {
+        this.primarySymbol = Objects.requireNonNull(symbol, "O simbolo principal e obrigatorio.");
+    }
+
+    public void setSecondarySymbol(String symbol) {
+        this.secondarySymbol = Objects.requireNonNull(symbol, "O simbolo secundario e obrigatorio.");
     }
 }

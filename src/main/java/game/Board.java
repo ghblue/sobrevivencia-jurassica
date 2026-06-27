@@ -49,7 +49,7 @@ public class Board {
 
     public boolean isPositionAvailable(Position position) {
         Objects.requireNonNull(position, "A posicao e obrigatoria.");
-        return isInsideBoard(position) && !occupiedPositions.contains(position);
+        return isInsideBoard(position) && !occupiedPositions.contains(position) && !isSupplyBox(position);
     }
 
     public void placePlayer(Player player) {
@@ -68,7 +68,14 @@ public class Board {
 
     public void placeSupplyBox(SupplyBox supplyBox) {
         Objects.requireNonNull(supplyBox, "A caixa de suprimentos e obrigatoria.");
-        placeElement(supplyBox.getPosition(), SupplyBox.VISUAL_SYMBOL);
+        Position position = supplyBox.getPosition();
+        validatePosition(position);
+
+        if (occupiedPositions.contains(position) || isSupplyBox(position)) {
+            throw new IllegalArgumentException("A posicao ja esta ocupada.");
+        }
+
+        getCell(position).setSecondarySymbol(SupplyBox.VISUAL_SYMBOL);
     }
 
     public MoveResult movePlayer(Player player, MovementDirection direction) {
@@ -110,6 +117,40 @@ public class Board {
         clearPosition(dinosaurPosition);
         player.moveTo(dinosaurPosition);
         placeElement(dinosaurPosition, PLAYER_SYMBOL);
+    }
+
+    public boolean canDinosaurMoveTo(Position position) {
+        Objects.requireNonNull(position, "A posicao e obrigatoria.");
+        return isInsideBoard(position) && !isWall(position) && !isDinosaur(position);
+    }
+
+    public boolean isPlayerAt(Position position) {
+        Objects.requireNonNull(position, "A posicao e obrigatoria.");
+        return isInsideBoard(position) && PLAYER_SYMBOL.equals(getCell(position).getPrimarySymbol());
+    }
+
+    public void moveDinosaurTo(Dinosaur dinosaur, Position newPosition) {
+        Objects.requireNonNull(dinosaur, "O dinossauro e obrigatorio.");
+        Objects.requireNonNull(newPosition, "A nova posicao e obrigatoria.");
+
+        if (!canDinosaurMoveTo(newPosition) || isPlayerAt(newPosition)) {
+            throw new IllegalArgumentException("O dinossauro nao pode se mover para essa posicao.");
+        }
+
+        Position currentPosition = dinosaur.getCurrentPosition();
+        clearPosition(currentPosition);
+        dinosaur.setCurrentPosition(newPosition);
+        replaceElement(newPosition, dinosaur.getVisualSymbol());
+    }
+
+    public void removeDinosaur(Dinosaur dinosaur) {
+        Objects.requireNonNull(dinosaur, "O dinossauro e obrigatorio.");
+        clearPosition(dinosaur.getCurrentPosition());
+    }
+
+    public void removeSupplyBoxAt(Position position) {
+        validatePosition(position);
+        getCell(position).setSecondarySymbol(EMPTY_CELL_SYMBOL);
     }
 
     public Position getRandomFreePosition(Random random) {
@@ -200,7 +241,7 @@ public class Board {
 
     private void clearPosition(Position position) {
         validatePosition(position);
-        getCell(position).setSymbol(EMPTY_CELL_SYMBOL);
+        getCell(position).setPrimarySymbol(EMPTY_CELL_SYMBOL);
         occupiedPositions.remove(position);
     }
 
@@ -228,11 +269,11 @@ public class Board {
     }
 
     private boolean isWall(Position position) {
-        return WALL_SYMBOL.equals(getCell(position).getSymbol());
+        return WALL_SYMBOL.equals(getCell(position).getPrimarySymbol());
     }
 
     private boolean isDinosaur(Position position) {
-        String symbol = getCell(position).getSymbol();
+        String symbol = getCell(position).getPrimarySymbol();
         return Compsognathus.VISUAL_SYMBOL.equals(symbol)
                 || Troodon.VISUAL_SYMBOL.equals(symbol)
                 || Velociraptor.VISUAL_SYMBOL.equals(symbol)
@@ -240,11 +281,19 @@ public class Board {
     }
 
     private boolean isSupplyBox(Position position) {
-        return SupplyBox.VISUAL_SYMBOL.equals(getCell(position).getSymbol());
+        return SupplyBox.VISUAL_SYMBOL.equals(getCell(position).getSecondarySymbol());
     }
 
     private boolean hasFreePosition() {
-        return occupiedPositions.size() < size * size;
+        for (int row = 0; row < size; row++) {
+            for (int column = 0; column < size; column++) {
+                if (isPositionAvailable(new Position(row, column))) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     private Position getFirstFreePosition() {
