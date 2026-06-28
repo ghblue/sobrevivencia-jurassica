@@ -15,18 +15,22 @@ public class Game {
     private final Random random;
     private final CombatService combatService;
     private final DinosaurMovementService dinosaurMovementService;
+    private final BoardRenderer boardRenderer;
     private List<Dinosaur> dinosaurs;
     private List<SupplyBox> supplyBoxes;
     private GameStatus gameStatus;
+    private boolean debugMode;
 
     public Game() {
         this.scanner = new Scanner(System.in);
         this.random = new Random();
         this.combatService = new CombatService(scanner, new Dice(random));
         this.dinosaurMovementService = new DinosaurMovementService(random, combatService);
+        this.boardRenderer = new BoardRenderer();
         this.dinosaurs = new ArrayList<>();
         this.supplyBoxes = new ArrayList<>();
         this.gameStatus = GameStatus.EXITED;
+        this.debugMode = false;
     }
 
     public void start() {
@@ -73,14 +77,13 @@ public class Game {
         Player player = new Player(Player.INITIAL_HEALTH, difficulty.getPerception(), initialPosition);
 
         gameStatus = GameStatus.RUNNING;
+        debugMode = false;
         board.placePlayer(player);
         dinosaurs = createDinosaurs(board);
         board.generateRandomWalls(random);
         supplyBoxes = createSupplyBoxes(board);
 
-        board.print();
-        showPlayerStatus(player);
-        showDinosaurStatus();
+        showGameState(board, player);
         showMovementMenu(board, player);
         return gameStatus == GameStatus.EXITED;
     }
@@ -170,6 +173,7 @@ public class Game {
             System.out.println("4 - Mover para direita");
             System.out.println("5 - Exibir mapa novamente");
             System.out.println("6 - Usar kit medico");
+            System.out.println("7 - Alternar modo DEBUG");
             System.out.println("0 - Encerrar jogo");
             System.out.print("Escolha uma opcao: ");
 
@@ -189,11 +193,13 @@ public class Game {
                     handlePlayerMove(board, player, MovementDirection.RIGHT);
                     break;
                 case "5":
-                    board.print();
-                    showPlayerStatus(player);
+                    showGameState(board, player);
                     break;
                 case "6":
                     handleMedicalKitUse(board, player);
+                    break;
+                case "7":
+                    toggleDebugMode(board, player);
                     break;
                 case "0":
                     endGame(GameStatus.EXITED);
@@ -211,8 +217,7 @@ public class Game {
 
         switch (result) {
             case SUCCESS:
-                board.print();
-                showPlayerStatus(player);
+                showGameState(board, player);
                 finishPlayerTurn(board, player);
                 break;
             case OUT_OF_BOUNDS:
@@ -226,8 +231,7 @@ public class Game {
                 break;
             case SUPPLY_BOX:
                 collectSupplyBoxAt(player.getCurrentPosition(), player, board);
-                board.print();
-                showPlayerStatus(player);
+                showGameState(board, player);
                 finishPlayerTurn(board, player);
                 break;
             default:
@@ -251,8 +255,7 @@ public class Game {
                 dinosaurs.remove(dinosaur);
                 board.movePlayerToDefeatedDinosaurPosition(player, dinosaur);
                 System.out.println("Vitoria no combate.");
-                board.print();
-                showPlayerStatus(player);
+                showGameState(board, player);
                 finishPlayerTurn(board, player);
                 break;
             case PLAYER_DEFEATED:
@@ -260,8 +263,7 @@ public class Game {
                 updateGameStatus(player);
                 break;
             case FLED:
-                board.print();
-                showPlayerStatus(player);
+                showGameState(board, player);
                 finishPlayerTurn(board, player);
                 break;
             default:
@@ -298,9 +300,19 @@ public class Game {
 
         System.out.println("Turno dos dinossauros.");
         dinosaurMovementService.moveDinosaurs(board, player, dinosaurs);
-        board.print();
-        showPlayerStatus(player);
+        showGameState(board, player);
         updateGameStatus(player);
+    }
+
+    private void toggleDebugMode(Board board, Player player) {
+        debugMode = !debugMode;
+        System.out.println(debugMode ? "Modo DEBUG ativado." : "Modo DEBUG desativado.");
+        showGameState(board, player);
+    }
+
+    private void showGameState(Board board, Player player) {
+        boardRenderer.print(board, player, debugMode);
+        showPlayerStatus(player);
     }
 
     private void updateGameStatus(Player player) {
@@ -375,21 +387,4 @@ public class Game {
         System.out.println("Voce encontrou uma caixa de suprimentos, mas o conteudo nao foi localizado.");
     }
 
-    private void showDinosaurStatus() {
-        System.out.println("Dinossauros posicionados");
-
-        for (Dinosaur dinosaur : dinosaurs) {
-            Position position = dinosaur.getCurrentPosition();
-
-            System.out.printf(
-                    "%s | simbolo: %s | saude: %d | posicao: linha %d, coluna %d | descricao: %s%n",
-                    dinosaur.getName(),
-                    dinosaur.getVisualSymbol(),
-                    dinosaur.getHealth(),
-                    position.getRow(),
-                    position.getColumn(),
-                    dinosaur.getDescription()
-            );
-        }
-    }
 }

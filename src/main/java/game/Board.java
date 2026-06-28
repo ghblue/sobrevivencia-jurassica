@@ -129,6 +129,12 @@ public class Board {
         return isInsideBoard(position) && PLAYER_SYMBOL.equals(getCell(position).getPrimarySymbol());
     }
 
+    public boolean isVisionBlocker(Position position) {
+        Objects.requireNonNull(position, "A posicao e obrigatoria.");
+        return isInsideBoard(position)
+                && (isWall(position) || isDinosaur(position) || isSupplyBox(position));
+    }
+
     public void moveDinosaurTo(Dinosaur dinosaur, Position newPosition) {
         Objects.requireNonNull(dinosaur, "O dinossauro e obrigatorio.");
         Objects.requireNonNull(newPosition, "A nova posicao e obrigatoria.");
