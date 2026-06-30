@@ -16,8 +16,12 @@ public class Game {
     private final CombatService combatService;
     private final DinosaurMovementService dinosaurMovementService;
     private final BoardRenderer boardRenderer;
+    private Board board;
+    private Player player;
+    private Difficulty difficulty;
     private List<Dinosaur> dinosaurs;
     private List<SupplyBox> supplyBoxes;
+    private InitialGameState initialGameState;
     private GameStatus gameStatus;
     private boolean debugMode;
 
@@ -35,17 +39,21 @@ public class Game {
 
     public void start() {
         showWelcomeMessage();
-        showMainMenu();
+
+        if (showMainMenu()) {
+            startNewGame();
+            runGameFlow();
+        }
+
+        System.out.println("Saindo do jogo.");
     }
 
     private void showWelcomeMessage() {
         System.out.println("Bem-vindo ao Sobrevivencia Jurassica!");
     }
 
-    private void showMainMenu() {
-        boolean running = true;
-
-        while (running) {
+    private boolean showMainMenu() {
+        while (true) {
             System.out.println("Menu principal");
             System.out.println("1 - Jogar");
             System.out.println("2 - Sair");
@@ -55,14 +63,9 @@ public class Game {
 
             switch (option) {
                 case "1":
-                    if (!play()) {
-                        running = false;
-                    }
-                    break;
+                    return true;
                 case "2":
-                    System.out.println("Saindo do jogo.");
-                    running = false;
-                    break;
+                    return false;
                 default:
                     System.out.println("Opcao invalida.");
                     break;
@@ -70,22 +73,82 @@ public class Game {
         }
     }
 
-    private boolean play() {
-        Difficulty difficulty = chooseDifficulty();
-        Board board = new Board();
-        Position initialPosition = board.getInitialPlayerPosition();
-        Player player = new Player(Player.INITIAL_HEALTH, difficulty.getPerception(), initialPosition);
+    private void runGameFlow() {
+        boolean applicationRunning = true;
 
-        gameStatus = GameStatus.RUNNING;
-        debugMode = false;
+        while (applicationRunning) {
+            playCurrentGame();
+
+            switch (showEndGameMenu()) {
+                case "1":
+                    startNewGame();
+                    break;
+                case "2":
+                    restartCurrentGame();
+                    break;
+                case "0":
+                    applicationRunning = false;
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+
+    private void startNewGame() {
+        difficulty = chooseDifficulty();
+        initializeBoard();
+        initialGameState = new InitialGameState(difficulty, board, player, dinosaurs, supplyBoxes);
+        prepareGameToRun();
+    }
+
+    private void initializeBoard() {
+        board = new Board();
+        Position initialPosition = board.getInitialPlayerPosition();
+        player = new Player(Player.INITIAL_HEALTH, difficulty.getPerception(), initialPosition);
+
         board.placePlayer(player);
         dinosaurs = createDinosaurs(board);
         board.generateRandomWalls(random);
         supplyBoxes = createSupplyBoxes(board);
+    }
 
+    private void restartCurrentGame() {
+        difficulty = initialGameState.getDifficulty();
+        board = initialGameState.restoreBoard();
+        player = initialGameState.restorePlayer();
+        dinosaurs = initialGameState.restoreDinosaurs();
+        supplyBoxes = initialGameState.restoreSupplyBoxes();
+        prepareGameToRun();
+    }
+
+    private void prepareGameToRun() {
+        gameStatus = GameStatus.RUNNING;
+        debugMode = false;
+    }
+
+    private void playCurrentGame() {
         showGameState(board, player);
         showMovementMenu(board, player);
-        return gameStatus == GameStatus.EXITED;
+    }
+
+    private String showEndGameMenu() {
+        while (true) {
+            System.out.println("=== Fim de jogo ===");
+            System.out.println();
+            System.out.println("1 - Novo Jogo");
+            System.out.println("2 - Reiniciar Jogo");
+            System.out.println("0 - Sair");
+            System.out.print("Escolha uma opcao: ");
+
+            String option = scanner.nextLine();
+
+            if ("1".equals(option) || "2".equals(option) || "0".equals(option)) {
+                return option;
+            }
+
+            System.out.println("Opcao invalida.");
+        }
     }
 
     private List<Dinosaur> createDinosaurs(Board board) {

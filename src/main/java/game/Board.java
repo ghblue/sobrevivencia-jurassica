@@ -30,6 +30,26 @@ public class Board {
         initializeCells();
     }
 
+    private Board(Board source) {
+        this.size = source.size;
+        this.cells = new Cell[size][size];
+        this.occupiedPositions = new HashSet<>(source.occupiedPositions);
+
+        for (int row = 0; row < size; row++) {
+            for (int column = 0; column < size; column++) {
+                Cell sourceCell = source.cells[row][column];
+                Cell copiedCell = new Cell(EMPTY_CELL_SYMBOL);
+                copiedCell.setPrimarySymbol(sourceCell.getPrimarySymbol());
+                copiedCell.setSecondarySymbol(sourceCell.getSecondarySymbol());
+                cells[row][column] = copiedCell;
+            }
+        }
+    }
+
+    Board copy() {
+        return new Board(this);
+    }
+
     public int getSize() {
         return size;
     }
