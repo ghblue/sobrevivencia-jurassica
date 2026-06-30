@@ -12,4 +12,11 @@ public class Compsognathus extends Dinosaur {
     public String getDescription() {
         return "Dinossauro pequeno, rapido e perigoso em grupo.";
     }
+
+    @Override
+    public Dinosaur copy() {
+        Compsognathus copy = new Compsognathus(getCurrentPosition());
+        copy.setHealth(getHealth());
+        return copy;
+    }
 }

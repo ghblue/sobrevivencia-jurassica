@@ -10,4 +10,9 @@ public class MedicalKit extends Item {
         player.addMedicalKit();
         return "Kit medico adicionado ao inventario.";
     }
+
+    @Override
+    public Item copy() {
+        return new MedicalKit();
+    }
 }

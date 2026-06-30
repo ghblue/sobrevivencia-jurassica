@@ -10,4 +10,9 @@ public class TranquilizerGun extends Item {
         player.addTranquilizerAmmo();
         return "Municao de dardo adicionada ao inventario.";
     }
+
+    @Override
+    public Item copy() {
+        return new TranquilizerGun();
+    }
 }

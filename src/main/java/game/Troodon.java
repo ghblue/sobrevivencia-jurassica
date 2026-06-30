@@ -12,4 +12,11 @@ public class Troodon extends Dinosaur {
     public String getDescription() {
         return "Dinossauro atento, inteligente e ameacador durante a exploracao.";
     }
+
+    @Override
+    public Dinosaur copy() {
+        Troodon copy = new Troodon(getCurrentPosition());
+        copy.setHealth(getHealth());
+        return copy;
+    }
 }

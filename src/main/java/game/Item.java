@@ -14,4 +14,6 @@ public abstract class Item {
     }
 
     public abstract String applyTo(Player player);
+
+    public abstract Item copy();
 }

@@ -2,7 +2,7 @@ package game;
 
 import java.util.Objects;
 
-public class Player {
+public class Player implements Movable {
     public static final int INITIAL_HEALTH = 5;
 
     private int health;
@@ -67,7 +67,7 @@ public class Player {
         return perception;
     }
 
-    public void setPerception(int perception) {
+    public final void setPerception(int perception) {
         if (perception < 0) {
             throw new IllegalArgumentException("A percepcao nao pode ser negativa.");
         }
@@ -75,14 +75,16 @@ public class Player {
         this.perception = perception;
     }
 
+    @Override
     public Position getCurrentPosition() {
         return currentPosition;
     }
 
-    public void setCurrentPosition(Position currentPosition) {
+    private void setCurrentPosition(Position currentPosition) {
         this.currentPosition = Objects.requireNonNull(currentPosition, "A posicao atual e obrigatoria.");
     }
 
+    @Override
     public void moveTo(Position newPosition) {
         setCurrentPosition(newPosition);
     }

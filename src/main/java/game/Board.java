@@ -118,11 +118,11 @@ public class Board {
         }
 
         if (isSupplyBox(nextPosition)) {
-            movePlayerTo(player, currentPosition, nextPosition);
+            moveElement(player, nextPosition, PLAYER_SYMBOL);
             return MoveResult.SUPPLY_BOX;
         }
 
-        movePlayerTo(player, currentPosition, nextPosition);
+        moveElement(player, nextPosition, PLAYER_SYMBOL);
         return MoveResult.SUCCESS;
     }
 
@@ -130,13 +130,10 @@ public class Board {
         Objects.requireNonNull(player, "O jogador e obrigatorio.");
         Objects.requireNonNull(dinosaur, "O dinossauro e obrigatorio.");
 
-        Position currentPosition = player.getCurrentPosition();
         Position dinosaurPosition = dinosaur.getCurrentPosition();
 
-        clearPosition(currentPosition);
         clearPosition(dinosaurPosition);
-        player.moveTo(dinosaurPosition);
-        placeElement(dinosaurPosition, PLAYER_SYMBOL);
+        moveElement(player, dinosaurPosition, PLAYER_SYMBOL);
     }
 
     public boolean canDinosaurMoveTo(Position position) {
@@ -163,10 +160,7 @@ public class Board {
             throw new IllegalArgumentException("O dinossauro nao pode se mover para essa posicao.");
         }
 
-        Position currentPosition = dinosaur.getCurrentPosition();
-        clearPosition(currentPosition);
-        dinosaur.setCurrentPosition(newPosition);
-        replaceElement(newPosition, dinosaur.getVisualSymbol());
+        moveElement(dinosaur, newPosition, dinosaur.getVisualSymbol());
     }
 
     public void removeDinosaur(Dinosaur dinosaur) {
@@ -252,10 +246,10 @@ public class Board {
         occupiedPositions.add(position);
     }
 
-    private void movePlayerTo(Player player, Position currentPosition, Position nextPosition) {
-        clearPosition(currentPosition);
-        player.moveTo(nextPosition);
-        replaceElement(nextPosition, PLAYER_SYMBOL);
+    private void moveElement(Movable element, Position newPosition, String symbol) {
+        clearPosition(element.getCurrentPosition());
+        element.moveTo(newPosition);
+        replaceElement(newPosition, symbol);
     }
 
     private void replaceElement(Position position, String symbol) {

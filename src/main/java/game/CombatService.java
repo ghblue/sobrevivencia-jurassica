@@ -116,11 +116,12 @@ public class CombatService {
         int roll = dice.rollD6();
         System.out.println("Dado de ataque: " + roll);
 
-        if (dinosaur instanceof TRex) {
+        if (!dinosaur.canTakeUnarmedDamage()) {
             System.out.println("O ataque com as maos nao surtiu efeito contra o T-Rex.");
             return 0;
         }
 
+        // O valor do dado define falha, dano normal ou dano critico do ataque.
         if (roll == 6) {
             return 2;
         }
@@ -151,7 +152,7 @@ public class CombatService {
         player.useTranquilizerAmmo();
         System.out.println("Voce gastou 1 municao de dardo.");
 
-        if (dinosaur instanceof Velociraptor) {
+        if (!dinosaur.canBeHitByTranquilizer()) {
             System.out.println("O Velociraptor desviou do dardo.");
             return 0;
         }
@@ -163,12 +164,13 @@ public class CombatService {
         int roll = dice.rollD3();
         System.out.println("Teste de percepcao: " + roll);
 
+        // O jogador evita o ataque quando sua percepcao alcanca o valor sorteado.
         if (roll <= player.getPerception()) {
             System.out.println("Voce desviou do ataque.");
             return;
         }
 
-        int damage = dinosaur instanceof TRex ? 2 : 1;
+        int damage = dinosaur.getAttackDamage();
         player.takeDamage(damage);
         System.out.println(dinosaur.getName() + " causou " + damage + " de dano.");
 

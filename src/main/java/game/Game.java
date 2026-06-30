@@ -11,7 +11,7 @@ public class Game {
     private static final int TROODON_COUNT = 5;
     private static final int MEDICAL_KIT_HEALING = 1;
 
-    private final Scanner scanner;
+    private final ConsoleUI consoleUI;
     private final Random random;
     private final CombatService combatService;
     private final DinosaurMovementService dinosaurMovementService;
@@ -26,7 +26,8 @@ public class Game {
     private boolean debugMode;
 
     public Game() {
-        this.scanner = new Scanner(System.in);
+        Scanner scanner = new Scanner(System.in);
+        this.consoleUI = new ConsoleUI(scanner);
         this.random = new Random();
         this.combatService = new CombatService(scanner, new Dice(random));
         this.dinosaurMovementService = new DinosaurMovementService(random, combatService);
@@ -38,48 +39,23 @@ public class Game {
     }
 
     public void start() {
-        showWelcomeMessage();
+        consoleUI.showWelcomeMessage();
 
-        if (showMainMenu()) {
+        if (consoleUI.shouldStartGame()) {
             startNewGame();
-            runGameFlow();
+            runApplicationLoop();
         }
 
         System.out.println("Saindo do jogo.");
     }
 
-    private void showWelcomeMessage() {
-        System.out.println("Bem-vindo ao Sobrevivencia Jurassica!");
-    }
-
-    private boolean showMainMenu() {
-        while (true) {
-            System.out.println("Menu principal");
-            System.out.println("1 - Jogar");
-            System.out.println("2 - Sair");
-            System.out.print("Escolha uma opcao: ");
-
-            String option = scanner.nextLine();
-
-            switch (option) {
-                case "1":
-                    return true;
-                case "2":
-                    return false;
-                default:
-                    System.out.println("Opcao invalida.");
-                    break;
-            }
-        }
-    }
-
-    private void runGameFlow() {
+    private void runApplicationLoop() {
         boolean applicationRunning = true;
 
         while (applicationRunning) {
-            playCurrentGame();
+            runCurrentGame();
 
-            switch (showEndGameMenu()) {
+            switch (consoleUI.readEndGameMenuOption()) {
                 case "1":
                     startNewGame();
                     break;
@@ -96,7 +72,7 @@ public class Game {
     }
 
     private void startNewGame() {
-        difficulty = chooseDifficulty();
+        difficulty = consoleUI.chooseDifficulty();
         initializeBoard();
         initialGameState = new InitialGameState(difficulty, board, player, dinosaurs, supplyBoxes);
         prepareGameToRun();
@@ -114,6 +90,7 @@ public class Game {
     }
 
     private void restartCurrentGame() {
+        // O reinicio restaura copias do estado original, sem realizar novos sorteios.
         difficulty = initialGameState.getDifficulty();
         board = initialGameState.restoreBoard();
         player = initialGameState.restorePlayer();
@@ -127,28 +104,9 @@ public class Game {
         debugMode = false;
     }
 
-    private void playCurrentGame() {
-        showGameState(board, player);
-        showMovementMenu(board, player);
-    }
-
-    private String showEndGameMenu() {
-        while (true) {
-            System.out.println("=== Fim de jogo ===");
-            System.out.println();
-            System.out.println("1 - Novo Jogo");
-            System.out.println("2 - Reiniciar Jogo");
-            System.out.println("0 - Sair");
-            System.out.print("Escolha uma opcao: ");
-
-            String option = scanner.nextLine();
-
-            if ("1".equals(option) || "2".equals(option) || "0".equals(option)) {
-                return option;
-            }
-
-            System.out.println("Opcao invalida.");
-        }
+    private void runCurrentGame() {
+        showGameState();
+        runGameMenu();
     }
 
     private List<Dinosaur> createDinosaurs(Board board) {
@@ -192,77 +150,31 @@ public class Game {
         createdSupplyBoxes.add(supplyBox);
     }
 
-    private Difficulty chooseDifficulty() {
-        while (true) {
-            System.out.println("Escolha a dificuldade");
-            System.out.printf("1 - EASY (percepcao %d)%n", Difficulty.EASY.getPerception());
-            System.out.printf("2 - MEDIUM (percepcao %d)%n", Difficulty.MEDIUM.getPerception());
-            System.out.printf("3 - HARD (percepcao %d)%n", Difficulty.HARD.getPerception());
-            System.out.print("Escolha uma opcao: ");
-
-            String option = scanner.nextLine();
-
-            switch (option) {
-                case "1":
-                    return Difficulty.EASY;
-                case "2":
-                    return Difficulty.MEDIUM;
-                case "3":
-                    return Difficulty.HARD;
-                default:
-                    System.out.println("Opcao invalida.");
-                    break;
-            }
-        }
-    }
-
-    private void showPlayerStatus(Player player) {
-        Position position = player.getCurrentPosition();
-
-        System.out.println("Status do jogador");
-        System.out.println("Saude atual: " + player.getHealth());
-        System.out.println("Saude maxima: " + player.getMaxHealth());
-        System.out.println("Percepcao: " + player.getPerception());
-        System.out.printf("Posicao atual: linha %d, coluna %d%n", position.getRow(), position.getColumn());
-        System.out.println(player.getInventoryStatus());
-    }
-
-    private void showMovementMenu(Board board, Player player) {
+    private void runGameMenu() {
         while (isGameRunning()) {
-            System.out.println("=== Menu ===");
-            System.out.println("1 - Mover para cima");
-            System.out.println("2 - Mover para baixo");
-            System.out.println("3 - Mover para esquerda");
-            System.out.println("4 - Mover para direita");
-            System.out.println("5 - Exibir mapa novamente");
-            System.out.println("6 - Usar kit medico");
-            System.out.println("7 - Alternar modo DEBUG");
-            System.out.println("0 - Encerrar jogo");
-            System.out.print("Escolha uma opcao: ");
-
-            String option = scanner.nextLine();
+            String option = consoleUI.readGameMenuOption();
 
             switch (option) {
                 case "1":
-                    handlePlayerMove(board, player, MovementDirection.UP);
+                    handlePlayerMove(MovementDirection.UP);
                     break;
                 case "2":
-                    handlePlayerMove(board, player, MovementDirection.DOWN);
+                    handlePlayerMove(MovementDirection.DOWN);
                     break;
                 case "3":
-                    handlePlayerMove(board, player, MovementDirection.LEFT);
+                    handlePlayerMove(MovementDirection.LEFT);
                     break;
                 case "4":
-                    handlePlayerMove(board, player, MovementDirection.RIGHT);
+                    handlePlayerMove(MovementDirection.RIGHT);
                     break;
                 case "5":
-                    showGameState(board, player);
+                    showGameState();
                     break;
                 case "6":
-                    handleMedicalKitUse(board, player);
+                    handleMedicalKitUse();
                     break;
                 case "7":
-                    toggleDebugMode(board, player);
+                    toggleDebugMode();
                     break;
                 case "0":
                     endGame(GameStatus.EXITED);
@@ -274,14 +186,14 @@ public class Game {
         }
     }
 
-    private void handlePlayerMove(Board board, Player player, MovementDirection direction) {
+    private void handlePlayerMove(MovementDirection direction) {
         Position targetPosition = direction.getNextPosition(player.getCurrentPosition());
         MoveResult result = board.movePlayer(player, direction);
 
         switch (result) {
             case SUCCESS:
-                showGameState(board, player);
-                finishPlayerTurn(board, player);
+                showGameState();
+                finishPlayerTurn();
                 break;
             case OUT_OF_BOUNDS:
                 System.out.println("Movimento invalido: voce sairia dos limites do tabuleiro.");
@@ -290,12 +202,12 @@ public class Game {
                 System.out.println("Movimento invalido: ha uma parede nessa posicao.");
                 break;
             case DINOSAUR:
-                handleCombat(board, player, targetPosition);
+                handleCombat(targetPosition);
                 break;
             case SUPPLY_BOX:
-                collectSupplyBoxAt(player.getCurrentPosition(), player, board);
-                showGameState(board, player);
-                finishPlayerTurn(board, player);
+                collectSupplyBoxAt(player.getCurrentPosition());
+                showGameState();
+                finishPlayerTurn();
                 break;
             default:
                 System.out.println("Movimento invalido.");
@@ -303,7 +215,7 @@ public class Game {
         }
     }
 
-    private void handleCombat(Board board, Player player, Position targetPosition) {
+    private void handleCombat(Position targetPosition) {
         Dinosaur dinosaur = findDinosaurAt(targetPosition);
 
         if (dinosaur == null) {
@@ -318,26 +230,26 @@ public class Game {
                 dinosaurs.remove(dinosaur);
                 board.movePlayerToDefeatedDinosaurPosition(player, dinosaur);
                 System.out.println("Vitoria no combate.");
-                showGameState(board, player);
-                finishPlayerTurn(board, player);
+                showGameState();
+                finishPlayerTurn();
                 break;
             case PLAYER_DEFEATED:
-                showPlayerStatus(player);
-                updateGameStatus(player);
+                consoleUI.showPlayerStatus(player);
+                updateGameStatus();
                 break;
             case FLED:
-                showGameState(board, player);
-                finishPlayerTurn(board, player);
+                showGameState();
+                finishPlayerTurn();
                 break;
             default:
                 break;
         }
     }
 
-    private void handleMedicalKitUse(Board board, Player player) {
+    private void handleMedicalKitUse() {
         if (!player.hasMedicalKit()) {
             System.out.println("Voce nao possui kit medico.");
-            showPlayerStatus(player);
+            consoleUI.showPlayerStatus(player);
             return;
         }
 
@@ -350,12 +262,12 @@ public class Game {
             System.out.println("Sua saude ja estava no maximo.");
         }
 
-        showPlayerStatus(player);
-        finishPlayerTurn(board, player);
+        consoleUI.showPlayerStatus(player);
+        finishPlayerTurn();
     }
 
-    private void finishPlayerTurn(Board board, Player player) {
-        updateGameStatus(player);
+    private void finishPlayerTurn() {
+        updateGameStatus();
 
         if (!isGameRunning()) {
             return;
@@ -363,22 +275,22 @@ public class Game {
 
         System.out.println("Turno dos dinossauros.");
         dinosaurMovementService.moveDinosaurs(board, player, dinosaurs);
-        showGameState(board, player);
-        updateGameStatus(player);
+        showGameState();
+        updateGameStatus();
     }
 
-    private void toggleDebugMode(Board board, Player player) {
+    private void toggleDebugMode() {
         debugMode = !debugMode;
         System.out.println(debugMode ? "Modo DEBUG ativado." : "Modo DEBUG desativado.");
-        showGameState(board, player);
+        showGameState();
     }
 
-    private void showGameState(Board board, Player player) {
+    private void showGameState() {
         boardRenderer.print(board, player, debugMode);
-        showPlayerStatus(player);
+        consoleUI.showPlayerStatus(player);
     }
 
-    private void updateGameStatus(Player player) {
+    private void updateGameStatus() {
         if (!isGameRunning()) {
             return;
         }
@@ -432,7 +344,7 @@ public class Game {
         return null;
     }
 
-    private void collectSupplyBoxAt(Position position, Player player, Board board) {
+    private void collectSupplyBoxAt(Position position) {
         for (int index = 0; index < supplyBoxes.size(); index++) {
             SupplyBox supplyBox = supplyBoxes.get(index);
 

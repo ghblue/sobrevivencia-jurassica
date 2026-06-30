@@ -10,4 +10,9 @@ public class ElectricBaton extends Item {
         player.addElectricBaton();
         return "Bastao eletrico adicionado ao inventario.";
     }
+
+    @Override
+    public Item copy() {
+        return new ElectricBaton();
+    }
 }

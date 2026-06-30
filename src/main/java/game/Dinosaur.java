@@ -2,7 +2,10 @@ package game;
 
 import java.util.Objects;
 
-public abstract class Dinosaur {
+public abstract class Dinosaur implements Movable {
+    private static final int DEFAULT_ATTACK_DAMAGE = 1;
+    private static final int DEFAULT_MOVEMENT_STEP_COUNT = 1;
+
     private final String name;
     private int health;
     private Position currentPosition;
@@ -23,7 +26,7 @@ public abstract class Dinosaur {
         return health;
     }
 
-    public void setHealth(int health) {
+    public final void setHealth(int health) {
         if (health < 0) {
             throw new IllegalArgumentException("A saude nao pode ser negativa.");
         }
@@ -31,12 +34,18 @@ public abstract class Dinosaur {
         this.health = health;
     }
 
+    @Override
     public Position getCurrentPosition() {
         return currentPosition;
     }
 
-    public void setCurrentPosition(Position currentPosition) {
+    private void setCurrentPosition(Position currentPosition) {
         this.currentPosition = Objects.requireNonNull(currentPosition, "A posicao atual e obrigatoria.");
+    }
+
+    @Override
+    public void moveTo(Position newPosition) {
+        setCurrentPosition(newPosition);
     }
 
     public String getVisualSymbol() {
@@ -55,5 +64,23 @@ public abstract class Dinosaur {
         setHealth(Math.max(0, health - damage));
     }
 
+    public int getAttackDamage() {
+        return DEFAULT_ATTACK_DAMAGE;
+    }
+
+    public int getMovementStepCount() {
+        return DEFAULT_MOVEMENT_STEP_COUNT;
+    }
+
+    public boolean canTakeUnarmedDamage() {
+        return true;
+    }
+
+    public boolean canBeHitByTranquilizer() {
+        return true;
+    }
+
     public abstract String getDescription();
+
+    public abstract Dinosaur copy();
 }

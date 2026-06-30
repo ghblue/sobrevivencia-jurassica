@@ -5,9 +5,6 @@ import java.util.Objects;
 import java.util.Random;
 
 public class DinosaurMovementService {
-    private static final int DEFAULT_STEP_COUNT = 1;
-    private static final int VELOCIRAPTOR_STEP_COUNT = 2;
-
     private final Random random;
     private final CombatService combatService;
 
@@ -24,10 +21,6 @@ public class DinosaurMovementService {
         for (int index = 0; index < dinosaurs.size() && player.isAlive(); index++) {
             Dinosaur dinosaur = dinosaurs.get(index);
 
-            if (dinosaur instanceof TRex) {
-                continue;
-            }
-
             boolean removed = moveDinosaur(board, player, dinosaurs, dinosaur);
 
             if (removed) {
@@ -37,7 +30,7 @@ public class DinosaurMovementService {
     }
 
     private boolean moveDinosaur(Board board, Player player, List<Dinosaur> dinosaurs, Dinosaur dinosaur) {
-        int stepCount = getStepCount(dinosaur);
+        int stepCount = dinosaur.getMovementStepCount();
 
         for (int step = 0; step < stepCount && player.isAlive(); step++) {
             MovementDirection direction = getRandomDirection();
@@ -55,14 +48,6 @@ public class DinosaurMovementService {
         }
 
         return false;
-    }
-
-    private int getStepCount(Dinosaur dinosaur) {
-        if (dinosaur instanceof Velociraptor) {
-            return VELOCIRAPTOR_STEP_COUNT;
-        }
-
-        return DEFAULT_STEP_COUNT;
     }
 
     private MovementDirection getRandomDirection() {

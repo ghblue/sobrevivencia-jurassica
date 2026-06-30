@@ -55,6 +55,7 @@ public class VisibilityService {
         while (isInsideBoard(board, currentPosition)) {
             visiblePositions.add(currentPosition);
 
+            // O primeiro obstaculo aparece no mapa, mas bloqueia as casas seguintes.
             if (board.isVisionBlocker(currentPosition)) {
                 return;
             }

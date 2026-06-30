@@ -20,4 +20,8 @@ public class SupplyBox {
     public Item getContent() {
         return content;
     }
+
+    public SupplyBox copy() {
+        return new SupplyBox(position, content.copy());
+    }
 }
