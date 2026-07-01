@@ -2,14 +2,10 @@
 
 Projeto Java de Programacao Orientada a Objetos.
 
-Neste primeiro passo, o jogo possui apenas uma estrutura inicial em console:
+O jogo funciona no console e possui tabuleiro, movimentacao, visao limitada,
+dinossauros, itens, caixas de suprimentos e combate por turnos.
 
-- classe principal `Main`;
-- classe `Game`;
-- mensagem de boas-vindas;
-- menu com as opcoes `Jogar` e `Sair`.
-
-Ainda nao foram implementados tabuleiro, dinossauros, combate, itens ou interface grafica.
+A interface grafica ainda nao faz parte desta versao.
 
 ## Estrutura do projeto
 
@@ -18,11 +14,17 @@ sobrevivencia-jurassica/
 ├── src/
 │   └── main/
 │       └── java/
-│           └── game/
+│           └── jogo/
+│               ├── dinossauros/
+│               ├── enums/
+│               ├── itens/
+│               ├── modelo/
+│               ├── servicos/
+│               └── util/
 ├── README.md
 ├── .gitignore
 └── docs/
-    └── relatorio.md
+    └── decimo-quarto-passo.md
 ```
 
 ## Como executar
@@ -30,11 +32,12 @@ sobrevivencia-jurassica/
 Compile o projeto a partir da raiz:
 
 ```bash
-javac -d out src/main/java/game/*.java
+mkdir -p out
+find src/main/java -name "*.java" -print0 | xargs -0 javac -encoding UTF-8 -d out
 ```
 
 Execute a classe principal:
 
 ```bash
-java -cp out game.Main
+java -cp out jogo.Main
 ```
