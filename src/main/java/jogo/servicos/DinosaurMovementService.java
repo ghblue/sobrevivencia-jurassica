@@ -1,5 +1,6 @@
 package jogo.servicos;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Random;
@@ -24,25 +25,34 @@ public class DinosaurMovementService {
     }
 
     // Executa o turno de todos os dinossauros enquanto o jogador estiver vivo.
-    public void moveDinosaurs(Board board, Player player, List<Dinosaur> dinosaurs) {
+    public List<String> moveDinosaurs(Board board, Player player, List<Dinosaur> dinosaurs) {
         Objects.requireNonNull(board, "O tabuleiro e obrigatorio.");
         Objects.requireNonNull(player, "O jogador e obrigatorio.");
         Objects.requireNonNull(dinosaurs, "A lista de dinossauros e obrigatoria.");
+        List<String> mensagens = new ArrayList<>();
 
         for (int index = 0; index < dinosaurs.size() && player.isAlive(); index++) {
             Dinosaur dinosaur = dinosaurs.get(index);
 
             // A lista pode diminuir durante o turno quando o jogador vence um combate.
-            boolean removed = moveDinosaur(board, player, dinosaurs, dinosaur);
+            boolean removed = moveDinosaur(board, player, dinosaurs, dinosaur, mensagens);
 
             if (removed) {
                 index--;
             }
         }
+
+        return mensagens;
     }
 
     // Tenta a quantidade de passos definida pela espécie do dinossauro.
-    private boolean moveDinosaur(Board board, Player player, List<Dinosaur> dinosaurs, Dinosaur dinosaur) {
+    private boolean moveDinosaur(
+            Board board,
+            Player player,
+            List<Dinosaur> dinosaurs,
+            Dinosaur dinosaur,
+            List<String> mensagens
+    ) {
         int stepCount = dinosaur.getMovementStepCount();
 
         for (int step = 0; step < stepCount && player.isAlive(); step++) {
@@ -55,7 +65,7 @@ public class DinosaurMovementService {
             }
 
             if (board.isPlayerAt(nextPosition)) {
-                return handleDinosaurFoundPlayer(board, player, dinosaurs, dinosaur);
+                return handleDinosaurFoundPlayer(board, player, dinosaurs, dinosaur, mensagens);
             }
 
             board.moveDinosaurTo(dinosaur, nextPosition);
@@ -75,17 +85,15 @@ public class DinosaurMovementService {
             Board board,
             Player player,
             List<Dinosaur> dinosaurs,
-            Dinosaur dinosaur
+            Dinosaur dinosaur,
+            List<String> mensagens
     ) {
-        System.out.println(dinosaur.getName() + " encontrou o jogador durante a movimentacao.");
-        System.out.println("Voce foi surpreendido pelo " + dinosaur.getName() + ".");
-
         CombatResult result = combatService.startCombat(player, dinosaur, true);
 
         if (result == CombatResult.PLAYER_WON) {
             dinosaurs.remove(dinosaur);
             board.removeDinosaur(dinosaur);
-            System.out.println("Vitoria no combate.");
+            mensagens.add("Vitoria no combate.");
             return true;
         }
 

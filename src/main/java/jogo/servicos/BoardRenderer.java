@@ -22,19 +22,18 @@ public class BoardRenderer {
         );
     }
 
-    // Escolhe entre a renderização completa e a limitada pela visibilidade.
-    public void print(Board board, Player player, boolean debugMode) {
+    // Escolhe entre a renderizacao completa e a limitada pela visibilidade.
+    public String render(Board board, Player player, boolean debugMode) {
         // No modo DEBUG, todos os elementos são exibidos para facilitar a inspeção da partida.
         if (debugMode) {
-            printFullMap(board);
-            return;
+            return renderFullMap(board);
         }
 
-        printLimitedMap(board, player);
+        return renderLimitedMap(board, player);
     }
 
-    // Monta e imprime o mapa completo usado pelo modo DEBUG.
-    public void printFullMap(Board board) {
+    // Monta o mapa completo usado pelo modo DEBUG.
+    public String renderFullMap(Board board) {
         Objects.requireNonNull(board, "O tabuleiro e obrigatorio.");
         String[][] map = new String[board.getSize()][board.getSize()];
 
@@ -44,36 +43,36 @@ public class BoardRenderer {
             }
         }
 
-        printMap(map);
+        return renderMap(map);
     }
 
     // Solicita ao serviço de visibilidade o mapa que o jogador pode enxergar.
-    public void printLimitedMap(Board board, Player player) {
-        printMap(visibilityService.createVisibleMap(board, player));
+    public String renderLimitedMap(Board board, Player player) {
+        return renderMap(visibilityService.createVisibleMap(board, player));
     }
 
-    // Imprime a matriz de símbolos com índices de linha e coluna.
-    private void printMap(String[][] map) {
-        printColumnIndexes(map.length);
+    // Formata a matriz de simbolos com indices de linha e coluna para a interface console.
+    private String renderMap(String[][] map) {
+        StringBuilder builder = new StringBuilder();
+        appendColumnIndexes(builder, map.length);
 
         for (int row = 0; row < map.length; row++) {
-            System.out.printf("%2d ", row);
+            builder.append(System.lineSeparator());
+            builder.append(String.format("%2d ", row));
 
             for (int column = 0; column < map[row].length; column++) {
-                System.out.printf("%2s ", map[row][column]);
+                builder.append(String.format("%2s ", map[row][column]));
             }
-
-            System.out.println();
         }
+
+        return builder.toString();
     }
 
-    private void printColumnIndexes(int size) {
-        System.out.print("   ");
+    private void appendColumnIndexes(StringBuilder builder, int size) {
+        builder.append("   ");
 
         for (int column = 0; column < size; column++) {
-            System.out.printf("%2d ", column);
+            builder.append(String.format("%2d ", column));
         }
-
-        System.out.println();
     }
 }

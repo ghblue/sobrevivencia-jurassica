@@ -229,21 +229,6 @@ public class Board {
         }
     }
 
-    // Imprime todas as células do tabuleiro sem aplicar visão limitada.
-    public void print() {
-        printColumnIndexes();
-
-        for (int row = 0; row < size; row++) {
-            System.out.printf("%2d ", row);
-
-            for (int column = 0; column < size; column++) {
-                System.out.printf("%2s ", cells[row][column].getSymbol());
-            }
-
-            System.out.println();
-        }
-    }
-
     // Preenche a matriz com células vazias antes de posicionar os elementos.
     private void initializeCells() {
         for (int row = 0; row < size; row++) {
@@ -251,16 +236,6 @@ public class Board {
                 cells[row][column] = new Cell(EMPTY_CELL_SYMBOL);
             }
         }
-    }
-
-    private void printColumnIndexes() {
-        System.out.print("   ");
-
-        for (int column = 0; column < size; column++) {
-            System.out.printf("%2d ", column);
-        }
-
-        System.out.println();
     }
 
     private void placeElement(Position position, String symbol) {
