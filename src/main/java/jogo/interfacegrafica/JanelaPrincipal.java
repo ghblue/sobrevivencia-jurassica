@@ -8,8 +8,6 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
-import java.io.File;
-import java.net.URL;
 import java.util.HashSet;
 import java.util.Set;
 import javax.swing.JButton;
@@ -22,19 +20,25 @@ import jogo.Game;
 import jogo.enums.Difficulty;
 import jogo.enums.GameStatus;
 import jogo.enums.MovementDirection;
+import jogo.interfacegrafica.recursos.CarregadorImagens;
 import jogo.modelo.Player;
 import jogo.resultado.ResultadoAcao;
+import jogo.resultado.TipoResultadoAcao;
 
 public class JanelaPrincipal extends JFrame implements KeyListener {
-    private static final String CAMINHO_CAPA_RECURSO = "/jogo/util/images/capa-do-jogo.png";
-    private static final String CAMINHO_CAPA_ARQUIVO = "src/main/java/jogo/util/images/capa-do-jogo.png";
     private static final String MENSAGEM_TURNO_DINOSSAUROS = "Turno dos dinossauros.";
+    private static final int LARGURA_LOGO = 1920;
+    private static final int ALTURA_LOGO = 1080;
+    private static final int TAMANHO_ICONE_INVENTARIO = 40;
 
     private final InterfaceGrafica interfaceGrafica;
     private final Game game;
     private final Set<Integer> teclasPressionadas;
     private JPanel painelAtual;
     private JLabel rotuloStatus;
+    private JLabel rotuloKitVisual;
+    private JLabel rotuloBastaoVisual;
+    private JLabel rotuloDardoVisual;
     private PainelTabuleiro painelTabuleiro;
     private JButton botaoDebug;
     private boolean processandoAcao;
@@ -52,7 +56,7 @@ public class JanelaPrincipal extends JFrame implements KeyListener {
     // Configura a janela principal compartilhada por todas as telas graficas.
     private void configurarJanela() {
         setTitle("Sobrevivência Jurássica");
-        setSize(720, 540);
+        setSize(1920, 1080);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         setResizable(false);
@@ -65,6 +69,9 @@ public class JanelaPrincipal extends JFrame implements KeyListener {
         processandoAcao = false;
         teclasPressionadas.clear();
         rotuloStatus = null;
+        rotuloKitVisual = null;
+        rotuloBastaoVisual = null;
+        rotuloDardoVisual = null;
         painelTabuleiro = null;
         botaoDebug = null;
 
@@ -98,19 +105,7 @@ public class JanelaPrincipal extends JFrame implements KeyListener {
     }
 
     private ImageIcon carregarImagemCapa() {
-        URL recurso = getClass().getResource(CAMINHO_CAPA_RECURSO);
-
-        if (recurso != null) {
-            return new ImageIcon(recurso);
-        }
-
-        File arquivo = new File(CAMINHO_CAPA_ARQUIVO);
-
-        if (arquivo.exists()) {
-            return new ImageIcon(arquivo.getPath());
-        }
-
-        return null;
+        return CarregadorImagens.carregarOpcional("logo.png", LARGURA_LOGO, ALTURA_LOGO);
     }
 
     private static class PainelComImagem extends JPanel {
@@ -151,17 +146,45 @@ public class JanelaPrincipal extends JFrame implements KeyListener {
         teclasPressionadas.clear();
 
         JPanel telaPartida = new JPanel(new BorderLayout(4, 4));
-        rotuloStatus = new JLabel("", JLabel.CENTER);
         painelTabuleiro = new PainelTabuleiro(game);
+        JPanel painelCentralTabuleiro = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+        painelCentralTabuleiro.add(painelTabuleiro);
 
-        telaPartida.add(rotuloStatus, BorderLayout.NORTH);
-        telaPartida.add(painelTabuleiro, BorderLayout.CENTER);
+        telaPartida.add(criarPainelStatus(), BorderLayout.NORTH);
+        telaPartida.add(painelCentralTabuleiro, BorderLayout.CENTER);
         telaPartida.add(criarPainelControles(), BorderLayout.SOUTH);
 
-        setSize(900, 820);
+        setSize(1280, 1000);
         setLocationRelativeTo(null);
         trocarPainel(telaPartida);
         atualizarTela();
+    }
+
+    private JPanel criarPainelStatus() {
+        JPanel painelStatus = new JPanel(new BorderLayout());
+        JPanel painelInventario = new JPanel(new FlowLayout());
+
+        rotuloStatus = new JLabel("", JLabel.CENTER);
+        rotuloKitVisual = criarRotuloInventario("kit_medico.png");
+        rotuloBastaoVisual = criarRotuloInventario("bastao_eletrico.png");
+        rotuloDardoVisual = criarRotuloInventario("arma_dardos.png");
+
+        painelInventario.add(rotuloKitVisual);
+        painelInventario.add(rotuloBastaoVisual);
+        painelInventario.add(rotuloDardoVisual);
+        painelStatus.add(rotuloStatus, BorderLayout.NORTH);
+        painelStatus.add(painelInventario, BorderLayout.CENTER);
+        return painelStatus;
+    }
+
+    private JLabel criarRotuloInventario(String nomeImagem) {
+        JLabel rotulo = new JLabel();
+        rotulo.setIcon(CarregadorImagens.carregarOpcional(
+                nomeImagem,
+                TAMANHO_ICONE_INVENTARIO,
+                TAMANHO_ICONE_INVENTARIO));
+        rotulo.setHorizontalTextPosition(JLabel.RIGHT);
+        return rotulo;
     }
 
     private JPanel criarPainelControles() {
@@ -233,6 +256,12 @@ public class JanelaPrincipal extends JFrame implements KeyListener {
 
         try {
             ResultadoAcao resultado = game.moverJogador(direcao);
+
+            if (resultado.getTipo() == TipoResultadoAcao.MOVIMENTO_BLOQUEADO) {
+                // Movimentos bloqueados são ignorados para evitar pop-ups excessivos na interface.
+                return;
+            }
+
             mostrarMensagens(resultado);
             atualizarTela();
             tratarFimDeJogo(resultado);
@@ -299,7 +328,8 @@ public class JanelaPrincipal extends JFrame implements KeyListener {
         }
     }
 
-    // Atualiza status, tabuleiro e controles depois de qualquer acao valida ou tentativa.
+    // Atualiza status, tabuleiro e controles depois de qualquer acao valida ou
+    // tentativa.
     private void atualizarTela() {
         if (!game.temPartidaPreparada() || rotuloStatus == null) {
             return;
@@ -316,12 +346,13 @@ public class JanelaPrincipal extends JFrame implements KeyListener {
                 player.hasElectricBaton() ? "Sim" : "Não",
                 player.getTranquilizerAmmo(),
                 game.getDinosaurs().size(),
-                game.isDebugMode() ? "Ativado" : "Desativado"
-        ));
+                game.isDebugMode() ? "Ativado" : "Desativado"));
 
         if (botaoDebug != null) {
             botaoDebug.setText(game.isDebugMode() ? "DEBUG: Ativado" : "DEBUG: Desativado");
         }
+
+        atualizarInventarioVisual(player);
 
         if (painelTabuleiro != null) {
             painelTabuleiro.atualizarTabuleiro();
@@ -330,7 +361,18 @@ public class JanelaPrincipal extends JFrame implements KeyListener {
         repaint();
     }
 
-    // Trata vitoria, derrota ou saida e oferece novo jogo, reinicio ou encerramento.
+    private void atualizarInventarioVisual(Player player) {
+        if (rotuloKitVisual == null || rotuloBastaoVisual == null || rotuloDardoVisual == null) {
+            return;
+        }
+
+        rotuloKitVisual.setText("Kits: " + player.getMedicalKitCount());
+        rotuloBastaoVisual.setText("Bastao: " + (player.hasElectricBaton() ? "Sim" : "Nao"));
+        rotuloDardoVisual.setText("Dardos: " + player.getTranquilizerAmmo());
+    }
+
+    // Trata vitoria, derrota ou saida e oferece novo jogo, reinicio ou
+    // encerramento.
     private void tratarFimDeJogo(ResultadoAcao resultado) {
         if (resultado == null || resultado.getEstadoPartida() == GameStatus.RUNNING) {
             return;
@@ -345,8 +387,7 @@ public class JanelaPrincipal extends JFrame implements KeyListener {
                 JOptionPane.INFORMATION_MESSAGE,
                 null,
                 opcoes,
-                opcoes[0]
-        );
+                opcoes[0]);
 
         switch (escolha) {
             case 1:
@@ -456,8 +497,7 @@ public class JanelaPrincipal extends JFrame implements KeyListener {
                 JOptionPane.QUESTION_MESSAGE,
                 null,
                 opcoes,
-                opcoes[0]
-        );
+                opcoes[0]);
 
         switch (escolha) {
             case 0:
@@ -547,6 +587,7 @@ public class JanelaPrincipal extends JFrame implements KeyListener {
 
     @Override
     public void keyTyped(KeyEvent event) {
-        // O jogo usa keyPressed para evitar movimentos duplicados por caractere digitado.
+        // O jogo usa keyPressed para evitar movimentos duplicados por caractere
+        // digitado.
     }
 }

@@ -30,21 +30,30 @@ public class CombatService {
     public CombatResult startCombat(Player player, Dinosaur dinosaur, boolean dinosaurStarts) {
         Objects.requireNonNull(player, "O jogador e obrigatorio.");
         Objects.requireNonNull(dinosaur, "O dinossauro e obrigatorio.");
+        List<String> contextoInicial = new ArrayList<>();
 
         if (dinosaurStarts) {
-            interfaceUsuario.mostrarMensagem(dinosaur.getName() + " encontrou o jogador durante a movimentacao.");
-            interfaceUsuario.mostrarMensagem("Voce foi surpreendido pelo " + dinosaur.getName() + ".");
-            interfaceUsuario.mostrarMensagem("Um dinossauro iniciou o combate!");
+            contextoInicial.add(dinosaur.getName() + " encontrou o jogador durante a movimentacao.");
+            contextoInicial.add("Voce foi surpreendido pelo " + dinosaur.getName() + ".");
+            contextoInicial.add("Um dinossauro iniciou o combate.");
         } else {
-            interfaceUsuario.mostrarMensagem("Voce encontrou um dinossauro!");
+            contextoInicial.add("Voce encontrou um dinossauro.");
         }
 
-        interfaceUsuario.mostrarMensagem("Dinossauro encontrado: " + dinosaur.getName());
-        printHealthStatus(player, dinosaur);
+        contextoInicial.add("Dinossauro encontrado: " + dinosaur.getName());
 
         if (dinosaurStarts) {
-            dinosaurAttack(player, dinosaur);
-            printHealthStatus(player, dinosaur);
+            List<String> mensagensAtaqueInicial = new ArrayList<>();
+            mensagensAtaqueInicial.addAll(contextoInicial);
+            dinosaurAttack(
+                    player,
+                    dinosaur,
+                    mensagensAtaqueInicial,
+                    "desviar do ataque inicial do " + dinosaur.getName()
+            );
+            addHealthStatus(player, dinosaur, mensagensAtaqueInicial);
+            mostrarResumoCombate(mensagensAtaqueInicial);
+            contextoInicial.clear();
 
             if (!player.isAlive()) {
                 return CombatResult.PLAYER_DEFEATED;
@@ -53,7 +62,9 @@ public class CombatService {
 
         // Cada rodada começa com a ação do jogador e, se o inimigo sobreviver, termina com o contra-ataque.
         while (player.isAlive() && dinosaur.isAlive()) {
-            int damage = choosePlayerAction(player, dinosaur);
+            List<String> mensagensRodada = new ArrayList<>();
+            int damage = choosePlayerAction(player, dinosaur, contextoInicial, mensagensRodada);
+            contextoInicial.clear();
 
             if (damage < 0) {
                 interfaceUsuario.mostrarMensagem("Voce fugiu do combate.");
@@ -62,26 +73,38 @@ public class CombatService {
 
             if (damage > 0) {
                 dinosaur.takeDamage(damage);
-                interfaceUsuario.mostrarMensagem("Voce causou " + damage + " pontos de dano.");
+                mensagensRodada.add("Voce causou " + damage + " pontos de dano.");
             } else {
-                interfaceUsuario.mostrarMensagem("Voce nao causou dano.");
+                mensagensRodada.add("Voce nao causou dano.");
             }
 
             if (!dinosaur.isAlive()) {
-                interfaceUsuario.mostrarMensagem("Voce derrotou o " + dinosaur.getName() + ".");
+                mensagensRodada.add("Voce derrotou o " + dinosaur.getName() + ".");
+                mostrarResumoCombate(mensagensRodada);
                 return CombatResult.PLAYER_WON;
             }
 
-            interfaceUsuario.mostrarMensagem("O dinossauro sobreviveu.");
-            dinosaurAttack(player, dinosaur);
-            printHealthStatus(player, dinosaur);
+            mensagensRodada.add("O dinossauro sobreviveu.");
+            dinosaurAttack(
+                    player,
+                    dinosaur,
+                    mensagensRodada,
+                    "desviar do ataque do " + dinosaur.getName()
+            );
+            addHealthStatus(player, dinosaur, mensagensRodada);
+            mostrarResumoCombate(mensagensRodada);
         }
 
         return player.isAlive() ? CombatResult.PLAYER_WON : CombatResult.PLAYER_DEFEATED;
     }
 
     // Lê a ação do jogador e devolve o dano calculado ou o sinal de fuga.
-    private int choosePlayerAction(Player player, Dinosaur dinosaur) {
+    private int choosePlayerAction(
+            Player player,
+            Dinosaur dinosaur,
+            List<String> contextoCombate,
+            List<String> mensagensRodada
+    ) {
         while (true) {
             List<String> opcoes = new ArrayList<>();
             List<String> acoes = new ArrayList<>();
@@ -103,7 +126,7 @@ public class CombatService {
             acoes.add("FUGIR");
 
             int option = interfaceUsuario.solicitarOpcao(
-                    montarTituloAcao(player, dinosaur),
+                    montarTituloAcao(player, dinosaur, contextoCombate),
                     opcoes.toArray(new String[0])
             );
 
@@ -119,11 +142,11 @@ public class CombatService {
 
             switch (acoes.get(option - 1)) {
                 case "MAOS":
-                    return attackWithHands(dinosaur);
+                    return attackWithHands(dinosaur, mensagensRodada);
                 case "BASTAO":
-                    return attackWithElectricBaton();
+                    return attackWithElectricBaton(mensagensRodada);
                 case "DARDOS":
-                    return attackWithTranquilizerGun(player, dinosaur);
+                    return attackWithTranquilizerGun(player, dinosaur, mensagensRodada);
                 case "FUGIR":
                     return -1;
                 default:
@@ -133,23 +156,61 @@ public class CombatService {
         }
     }
 
-    private String montarTituloAcao(Player player, Dinosaur dinosaur) {
-        return String.format(
+    private String montarTituloAcao(Player player, Dinosaur dinosaur, List<String> contextoCombate) {
+        StringBuilder titulo = new StringBuilder();
+
+        for (String mensagem : contextoCombate) {
+            titulo.append(mensagem).append(System.lineSeparator());
+        }
+
+        if (!contextoCombate.isEmpty()) {
+            titulo.append(System.lineSeparator());
+        }
+
+        titulo.append(String.format(
                 "Combate contra %s%nSaude do jogador: %d/%d%nSaude do dinossauro: %d%nEscolha sua acao:",
                 dinosaur.getName(),
                 player.getHealth(),
                 player.getMaxHealth(),
                 dinosaur.getHealth()
-        );
+        ));
+        return titulo.toString();
+    }
+
+    private void mostrarResumoCombate(List<String> mensagens) {
+        if (mensagens.isEmpty()) {
+            return;
+        }
+
+        StringBuilder resumo = new StringBuilder();
+
+        for (String mensagem : mensagens) {
+            if (resumo.length() > 0) {
+                resumo.append(System.lineSeparator());
+            }
+
+            resumo.append(mensagem);
+        }
+
+        interfaceUsuario.mostrarMensagem(resumo.toString());
+    }
+
+    private void addHealthStatus(Player player, Dinosaur dinosaur, List<String> mensagens) {
+        mensagens.add(String.format(
+                "Saude do jogador: %d/%d%nSaude do dinossauro: %d",
+                player.getHealth(),
+                player.getMaxHealth(),
+                dinosaur.getHealth()
+        ));
     }
 
     // Calcula falha, dano comum ou crítico do ataque desarmado.
-    private int attackWithHands(Dinosaur dinosaur) {
+    private int attackWithHands(Dinosaur dinosaur, List<String> mensagens) {
         int roll = dice.rollD6();
-        interfaceUsuario.mostrarMensagem("O dado resultou em " + roll + ".");
+        mensagens.add("Rolou o dado de ataque com as maos e tirou " + roll + ".");
 
         if (!dinosaur.canTakeUnarmedDamage()) {
-            interfaceUsuario.mostrarMensagem("O ataque com as maos nao surtiu efeito contra o T-Rex.");
+            mensagens.add("O ataque com as maos nao surtiu efeito contra o T-Rex.");
             return 0;
         }
 
@@ -166,9 +227,9 @@ public class CombatService {
     }
 
     // Calcula o dano do bastão elétrico de acordo com o dado de ataque.
-    private int attackWithElectricBaton() {
+    private int attackWithElectricBaton(List<String> mensagens) {
         int roll = dice.rollD6();
-        interfaceUsuario.mostrarMensagem("O dado resultou em " + roll + ".");
+        mensagens.add("Rolou o dado de ataque com o bastao eletrico e tirou " + roll + ".");
 
         if (roll > 5) {
             return 2;
@@ -182,12 +243,12 @@ public class CombatService {
     }
 
     // Consome o dardo e aplica a regra de esquiva especial do Velociraptor.
-    private int attackWithTranquilizerGun(Player player, Dinosaur dinosaur) {
+    private int attackWithTranquilizerGun(Player player, Dinosaur dinosaur, List<String> mensagens) {
         player.useTranquilizerAmmo();
-        interfaceUsuario.mostrarMensagem("Voce gastou 1 municao de dardo.");
+        mensagens.add("Voce gastou 1 municao de dardo.");
 
         if (!dinosaur.canBeHitByTranquilizer()) {
-            interfaceUsuario.mostrarMensagem("O Velociraptor desviou do dardo.");
+            mensagens.add("O Velociraptor desviou do dardo.");
             return 0;
         }
 
@@ -195,31 +256,23 @@ public class CombatService {
     }
 
     // Resolve o turno inimigo usando percepção para decidir a esquiva.
-    private void dinosaurAttack(Player player, Dinosaur dinosaur) {
+    private void dinosaurAttack(Player player, Dinosaur dinosaur, List<String> mensagens, String motivo) {
         int roll = dice.rollD3();
-        interfaceUsuario.mostrarMensagem("O teste de percepcao resultou em " + roll + ".");
+        mensagens.add("Rolou o teste de percepcao para " + motivo + " e tirou " + roll + ".");
 
         // A percepção define se o jogador consegue desviar do ataque inimigo.
         if (roll <= player.getPerception()) {
-            interfaceUsuario.mostrarMensagem("Voce desviou do ataque.");
+            mensagens.add("Voce desviou do ataque.");
             return;
         }
 
         int damage = dinosaur.getAttackDamage();
         player.takeDamage(damage);
-        interfaceUsuario.mostrarMensagem(dinosaur.getName() + " causou " + damage + " de dano.");
+        mensagens.add(dinosaur.getName() + " causou " + damage + " de dano.");
 
         if (!player.isAlive()) {
-            interfaceUsuario.mostrarMensagem("Voce foi derrotado.");
+            mensagens.add("Voce foi derrotado.");
         }
     }
 
-    private void printHealthStatus(Player player, Dinosaur dinosaur) {
-        interfaceUsuario.mostrarMensagem(String.format(
-                "Saude do jogador: %d/%d%nSaude do dinossauro: %d",
-                player.getHealth(),
-                player.getMaxHealth(),
-                dinosaur.getHealth()
-        ));
-    }
 }

@@ -74,7 +74,8 @@ public class Game {
         this.debugMode = false;
     }
 
-    // Mantem o ponto de entrada antigo para quem ainda iniciar o jogo pelo controlador.
+    // Mantem o ponto de entrada antigo para quem ainda iniciar o jogo pelo
+    // controlador.
     public void start() {
         if (interfaceUsuario instanceof InterfaceConsole) {
             ((InterfaceConsole) interfaceUsuario).iniciar(this);
@@ -100,8 +101,7 @@ public class Game {
                     TipoResultadoAcao.SEM_PARTIDA,
                     false,
                     false,
-                    "Nao ha partida para reiniciar."
-            );
+                    "Nao ha partida para reiniciar.");
         }
 
         // Reiniciar restaura cópias do estado original, sem realizar novos sorteios.
@@ -114,19 +114,20 @@ public class Game {
         return criarResultado(TipoResultadoAcao.PARTIDA_REINICIADA, true, false, new ArrayList<String>());
     }
 
-    // Executa uma tentativa de movimento sem depender de uma opcao digitada no menu.
+    // Executa uma tentativa de movimento sem depender de uma opcao digitada no
+    // menu.
     public ResultadoAcao moverJogador(MovementDirection direction) {
         if (!isGameRunning()) {
             return criarResultado(
                     TipoResultadoAcao.SEM_PARTIDA,
                     false,
                     false,
-                    "Nao ha partida em andamento."
-            );
+                    "Nao ha partida em andamento.");
         }
 
         Objects.requireNonNull(direction, "A direcao e obrigatoria.");
-        Position targetPosition = direction.getNextPosition(player.getCurrentPosition());
+        Position previousPosition = player.getCurrentPosition();
+        Position targetPosition = direction.getNextPosition(previousPosition);
         List<String> mensagens = new ArrayList<>();
 
         // Board valida o destino e devolve o evento que o controlador deve tratar.
@@ -145,9 +146,7 @@ public class Game {
             case DINOSAUR:
                 return handleCombat(targetPosition, mensagens);
             case SUPPLY_BOX:
-                collectSupplyBoxAt(player.getCurrentPosition(), mensagens);
-                finishPlayerTurn(mensagens);
-                return criarResultado(TipoResultadoAcao.CAIXA_COLETADA, true, false, mensagens);
+                return handleSupplyBox(targetPosition, previousPosition, mensagens);
             default:
                 mensagens.add("Movimento invalido.");
                 return criarResultado(TipoResultadoAcao.MOVIMENTO_BLOQUEADO, false, false, mensagens);
@@ -161,8 +160,7 @@ public class Game {
                     TipoResultadoAcao.SEM_PARTIDA,
                     false,
                     false,
-                    "Nao ha partida em andamento."
-            );
+                    "Nao ha partida em andamento.");
         }
 
         List<String> mensagens = new ArrayList<>();
@@ -192,8 +190,7 @@ public class Game {
                     TipoResultadoAcao.SEM_PARTIDA,
                     false,
                     false,
-                    "Nao ha partida em andamento."
-            );
+                    "Nao ha partida em andamento.");
         }
 
         debugMode = !debugMode;
@@ -203,8 +200,7 @@ public class Game {
                 TipoResultadoAcao.DEBUG_ALTERNADO,
                 true,
                 false,
-                debugMode ? "Modo DEBUG ativado." : "Modo DEBUG desativado."
-        );
+                debugMode ? "Modo DEBUG ativado." : "Modo DEBUG desativado.");
     }
 
     public ResultadoAcao encerrarPartida() {
@@ -213,8 +209,7 @@ public class Game {
                     TipoResultadoAcao.SEM_PARTIDA,
                     false,
                     false,
-                    "Nao ha partida em andamento."
-            );
+                    "Nao ha partida em andamento.");
         }
 
         List<String> mensagens = new ArrayList<>();
@@ -370,7 +365,7 @@ public class Game {
         updateGameStatus(mensagens);
     }
 
-    // Verifica derrota por falta de vida e vitória sem dinossauros ativos.
+    // Verifica derrota por falta de vida e vitória sem dinossauros ativos ou escondidos.
     private void updateGameStatus(List<String> mensagens) {
         if (!isGameRunning()) {
             return;
@@ -382,7 +377,7 @@ public class Game {
             return;
         }
 
-        if (dinosaurs.isEmpty()) {
+        if (dinosaurs.isEmpty() && !existeCompsognathusEscondido()) {
             endGame(GameStatus.VICTORY, mensagens);
         }
     }
@@ -423,31 +418,83 @@ public class Game {
         return null;
     }
 
-    // Coleta a caixa da posição atual e aplica seu item ao jogador.
-    private void collectSupplyBoxAt(Position position, List<String> mensagens) {
+    // Coleta a caixa encontrada ou revela o Compsognathus escondido.
+    private ResultadoAcao handleSupplyBox(Position position, Position previousPosition, List<String> mensagens) {
         for (int index = 0; index < supplyBoxes.size(); index++) {
             SupplyBox supplyBox = supplyBoxes.get(index);
 
             if (supplyBox.getPosition().equals(position)) {
                 Item item = supplyBox.getContent();
+
+                if (item instanceof SurpriseCompsognathus) {
+                    return handleSurpriseCompsognathus(index, position, previousPosition, mensagens);
+                }
+
                 mensagens.add("Voce encontrou uma caixa de suprimentos!");
                 mensagens.add("Conteudo: " + item.getName());
                 mensagens.add(item.applyTo(player));
                 supplyBoxes.remove(index);
                 board.removeSupplyBoxAt(position);
-                return;
+                finishPlayerTurn(mensagens);
+                return criarResultado(TipoResultadoAcao.CAIXA_COLETADA, true, false, mensagens);
             }
         }
 
         mensagens.add("Voce encontrou uma caixa de suprimentos, mas o conteudo nao foi localizado.");
+        return criarResultado(TipoResultadoAcao.CAIXA_COLETADA, false, false, mensagens);
+    }
+
+    // Revela o Compsognathus escondido e inicia o combate com o dinossauro atacando primeiro.
+    private ResultadoAcao handleSurpriseCompsognathus(
+            int supplyBoxIndex,
+            Position position,
+            Position previousPosition,
+            List<String> mensagens
+    ) {
+        supplyBoxes.remove(supplyBoxIndex);
+        board.removeSupplyBoxAt(position);
+        board.movePlayerTo(player, previousPosition);
+
+        Compsognathus compsognathus = new Compsognathus(position);
+        board.placeDinosaur(compsognathus);
+        dinosaurs.add(compsognathus);
+        mensagens.add("Um Compsognato estava escondido na caixa!");
+
+        CombatResult result = combatService.startCombat(player, compsognathus, true);
+
+        switch (result) {
+            case PLAYER_WON:
+                dinosaurs.remove(compsognathus);
+                board.movePlayerToDefeatedDinosaurPosition(player, compsognathus);
+                mensagens.add("Vitoria no combate.");
+                finishPlayerTurn(mensagens);
+                return criarResultado(TipoResultadoAcao.CAIXA_COLETADA, true, false, mensagens);
+            case PLAYER_DEFEATED:
+                updateGameStatus(mensagens);
+                return criarResultado(TipoResultadoAcao.DERROTA, false, true, mensagens);
+            case FLED:
+                updateGameStatus(mensagens);
+                return criarResultado(TipoResultadoAcao.CAIXA_COLETADA, true, false, mensagens);
+            default:
+                return criarResultado(TipoResultadoAcao.CAIXA_COLETADA, true, false, mensagens);
+        }
+    }
+
+    private boolean existeCompsognathusEscondido() {
+        for (SupplyBox supplyBox : supplyBoxes) {
+            if (supplyBox.getContent() instanceof SurpriseCompsognathus) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private ResultadoAcao criarResultado(
             TipoResultadoAcao tipo,
             boolean exibirEstado,
             boolean exibirStatusJogador,
-            String mensagem
-    ) {
+            String mensagem) {
         List<String> mensagens = new ArrayList<>();
         mensagens.add(mensagem);
         return criarResultado(tipo, exibirEstado, exibirStatusJogador, mensagens);
@@ -457,15 +504,13 @@ public class Game {
             TipoResultadoAcao tipo,
             boolean exibirEstado,
             boolean exibirStatusJogador,
-            List<String> mensagens
-    ) {
+            List<String> mensagens) {
         return new ResultadoAcao(
                 ajustarTipoPeloEstado(tipo),
                 gameStatus,
                 exibirEstado,
                 exibirStatusJogador,
-                mensagens
-        );
+                mensagens);
     }
 
     private TipoResultadoAcao ajustarTipoPeloEstado(TipoResultadoAcao tipoOriginal) {

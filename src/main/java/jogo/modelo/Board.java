@@ -157,6 +157,18 @@ public class Board {
         moveElement(player, dinosaurPosition, PLAYER_SYMBOL);
     }
 
+    // Reposiciona o jogador sem disparar eventos de movimento do tabuleiro.
+    public void movePlayerTo(Player player, Position newPosition) {
+        Objects.requireNonNull(player, "O jogador e obrigatorio.");
+        Objects.requireNonNull(newPosition, "A nova posicao e obrigatoria.");
+
+        if (!isInsideBoard(newPosition) || isWall(newPosition) || isDinosaur(newPosition)) {
+            throw new IllegalArgumentException("O jogador nao pode ser movido para essa posicao.");
+        }
+
+        moveElement(player, newPosition, PLAYER_SYMBOL);
+    }
+
     // Permite destinos dentro do mapa que não tenham parede nem outro dinossauro.
     public boolean canDinosaurMoveTo(Position position) {
         Objects.requireNonNull(position, "A posicao e obrigatoria.");
