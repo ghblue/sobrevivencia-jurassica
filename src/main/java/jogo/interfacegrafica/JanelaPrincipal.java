@@ -6,78 +6,95 @@ import java.awt.Graphics;
 import java.awt.Image;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.io.File;
 import java.net.URL;
-import jogo.Game;
-import jogo.enums.Difficulty;
-import jogo.interfaceusuario.InterfaceUsuario;
-import jogo.modelo.Player;
-import jogo.modelo.Position;
-
+import java.util.HashSet;
+import java.util.Set;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.ImageIcon;
 import javax.swing.JLabel;
-
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import jogo.Game;
+import jogo.enums.Difficulty;
+import jogo.enums.GameStatus;
+import jogo.enums.MovementDirection;
+import jogo.modelo.Player;
+import jogo.resultado.ResultadoAcao;
 
-public class JanelaPrincipal extends JFrame implements InterfaceUsuario {
+public class JanelaPrincipal extends JFrame implements KeyListener {
     private static final String CAMINHO_CAPA_RECURSO = "/jogo/util/images/capa-do-jogo.png";
     private static final String CAMINHO_CAPA_ARQUIVO = "src/main/java/jogo/util/images/capa-do-jogo.png";
+    private static final String MENSAGEM_TURNO_DINOSSAUROS = "Turno dos dinossauros.";
 
+    private final InterfaceGrafica interfaceGrafica;
     private final Game game;
-    private JLabel informacoesPartida;
+    private final Set<Integer> teclasPressionadas;
+    private JPanel painelAtual;
+    private JLabel rotuloStatus;
     private PainelTabuleiro painelTabuleiro;
+    private JButton botaoDebug;
+    private boolean processandoAcao;
 
     public JanelaPrincipal() {
-        this.game = new Game(this);
+        this.interfaceGrafica = new InterfaceGrafica(this);
+        this.game = new Game(interfaceGrafica);
+        this.teclasPressionadas = new HashSet<>();
         configurarJanela();
         montarMenuInicial();
         setVisible(true);
+        devolverFocoParaJanela();
     }
 
-    // Configura a janela principal da versao grafica.
+    // Configura a janela principal compartilhada por todas as telas graficas.
     private void configurarJanela() {
         setTitle("Sobrevivência Jurássica");
         setSize(720, 540);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         setResizable(false);
+        setFocusable(true);
+        addKeyListener(this);
     }
 
-    // Cria os componentes visuais do menu inicial.
+    // Monta o menu inicial com a imagem de fundo ja vinculada ao projeto.
     private void montarMenuInicial() {
+        processandoAcao = false;
+        teclasPressionadas.clear();
+        rotuloStatus = null;
+        painelTabuleiro = null;
+        botaoDebug = null;
+
         PainelComImagem painelPrincipal = new PainelComImagem(carregarImagemCapa());
         JPanel painelBotoes = new JPanel(new FlowLayout());
 
         JLabel titulo = new JLabel("SOBREVIVÊNCIA JURÁSSICA", JLabel.CENTER);
-        JButton botaoJogar = new JButton("Jogar");
-        JButton botaoSair = new JButton("Sair");
-
-        painelPrincipal.setLayout(new BorderLayout());
-        painelBotoes.setOpaque(false);
-
-        botaoJogar.addActionListener(new ActionListener() {
+        JButton botaoJogar = criarBotao("Jogar", new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
                 selecionarDificuldade();
             }
         });
-
-        botaoSair.addActionListener(new ActionListener() {
+        JButton botaoSair = criarBotao("Sair", new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                confirmarSaida();
+                confirmarSaidaDoPrograma();
             }
         });
 
+        painelPrincipal.setLayout(new BorderLayout());
+        painelBotoes.setOpaque(false);
         painelBotoes.add(botaoJogar);
         painelBotoes.add(botaoSair);
-
         painelPrincipal.add(titulo, BorderLayout.NORTH);
         painelPrincipal.add(painelBotoes, BorderLayout.SOUTH);
-        add(painelPrincipal);
+
+        setSize(720, 540);
+        setLocationRelativeTo(null);
+        trocarPainel(painelPrincipal);
     }
 
     private ImageIcon carregarImagemCapa() {
@@ -114,47 +131,319 @@ public class JanelaPrincipal extends JFrame implements InterfaceUsuario {
         }
     }
 
-    // Solicita a dificuldade antes de inicializar uma nova partida.
+    // Solicita a dificuldade e inicia uma partida nova com mapa recem-gerado.
     private void selecionarDificuldade() {
         Difficulty dificuldade = escolherDificuldade();
 
         if (dificuldade == null) {
+            devolverFocoParaJanela();
             return;
         }
 
-        game.iniciarNovaPartida(dificuldade);
-        mostrarTelaDoJogo();
+        ResultadoAcao resultado = game.iniciarNovaPartida(dificuldade);
+        mostrarMensagens(resultado);
+        montarTelaDaPartida();
     }
 
-    // Substitui o menu inicial pela tela da partida.
-    private void mostrarTelaDoJogo() {
-        JPanel telaJogo = new JPanel(new BorderLayout());
-        informacoesPartida = new JLabel("", JLabel.CENTER);
+    // Monta a tela jogavel com status, tabuleiro e controles de turno.
+    private void montarTelaDaPartida() {
+        processandoAcao = false;
+        teclasPressionadas.clear();
+
+        JPanel telaPartida = new JPanel(new BorderLayout(4, 4));
+        rotuloStatus = new JLabel("", JLabel.CENTER);
         painelTabuleiro = new PainelTabuleiro(game);
 
-        atualizarInformacoesPartida();
-        telaJogo.add(informacoesPartida, BorderLayout.NORTH);
-        telaJogo.add(painelTabuleiro, BorderLayout.CENTER);
+        telaPartida.add(rotuloStatus, BorderLayout.NORTH);
+        telaPartida.add(painelTabuleiro, BorderLayout.CENTER);
+        telaPartida.add(criarPainelControles(), BorderLayout.SOUTH);
 
-        setContentPane(telaJogo);
-        setSize(760, 800);
+        setSize(900, 820);
         setLocationRelativeTo(null);
-        revalidate();
-        repaint();
+        trocarPainel(telaPartida);
+        atualizarTela();
     }
 
-    private void atualizarInformacoesPartida() {
-        Player player = game.getPlayer();
-        Position position = player.getCurrentPosition();
+    private JPanel criarPainelControles() {
+        JPanel painelControles = new JPanel(new FlowLayout());
 
-        informacoesPartida.setText(String.format(
-                "Saúde: %d/%d | Percepção: %d | Dificuldade: %s | Posição: (%d, %d)",
+        painelControles.add(criarBotao("Cima", new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent event) {
+                executarMovimento(MovementDirection.UP);
+            }
+        }));
+        painelControles.add(criarBotao("Baixo", new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent event) {
+                executarMovimento(MovementDirection.DOWN);
+            }
+        }));
+        painelControles.add(criarBotao("Esquerda", new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent event) {
+                executarMovimento(MovementDirection.LEFT);
+            }
+        }));
+        painelControles.add(criarBotao("Direita", new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent event) {
+                executarMovimento(MovementDirection.RIGHT);
+            }
+        }));
+        painelControles.add(criarBotao("Usar kit médico", new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent event) {
+                usarKitMedico();
+            }
+        }));
+
+        botaoDebug = criarBotao("", new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent event) {
+                alternarDebug();
+            }
+        });
+        painelControles.add(botaoDebug);
+
+        painelControles.add(criarBotao("Sair", new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent event) {
+                sairDaPartida();
+            }
+        }));
+
+        return painelControles;
+    }
+
+    private JButton criarBotao(String texto, ActionListener listener) {
+        JButton botao = new JButton(texto);
+        botao.setFocusable(false);
+        botao.addActionListener(listener);
+        return botao;
+    }
+
+    // Executa movimento por botao ou teclado usando a logica real da partida.
+    private void executarMovimento(MovementDirection direcao) {
+        if (!podeExecutarAcaoDaPartida()) {
+            return;
+        }
+
+        processandoAcao = true;
+
+        try {
+            ResultadoAcao resultado = game.moverJogador(direcao);
+            mostrarMensagens(resultado);
+            atualizarTela();
+            tratarFimDeJogo(resultado);
+        } finally {
+            finalizarAcaoGrafica();
+        }
+    }
+
+    // Usa o kit medico pela regra central do jogo e atualiza a partida.
+    private void usarKitMedico() {
+        if (!podeExecutarAcaoDaPartida()) {
+            return;
+        }
+
+        processandoAcao = true;
+
+        try {
+            ResultadoAcao resultado = game.usarKitMedico();
+            mostrarMensagens(resultado);
+            atualizarTela();
+            tratarFimDeJogo(resultado);
+        } finally {
+            finalizarAcaoGrafica();
+        }
+    }
+
+    // Alterna o DEBUG real sem consumir turno nem mover dinossauros.
+    private void alternarDebug() {
+        if (!podeExecutarAcaoDaPartida()) {
+            return;
+        }
+
+        processandoAcao = true;
+
+        try {
+            ResultadoAcao resultado = game.alternarModoDebug();
+            mostrarMensagens(resultado);
+            atualizarTela();
+        } finally {
+            finalizarAcaoGrafica();
+        }
+    }
+
+    // Encerra somente a partida atual e abre o fluxo de fim de jogo.
+    private void sairDaPartida() {
+        if (!podeExecutarAcaoDaPartida()) {
+            return;
+        }
+
+        if (!interfaceGrafica.solicitarConfirmacao("Deseja encerrar a partida atual?")) {
+            devolverFocoParaJanela();
+            return;
+        }
+
+        processandoAcao = true;
+
+        try {
+            ResultadoAcao resultado = game.encerrarPartida();
+            mostrarMensagens(resultado);
+            atualizarTela();
+            tratarFimDeJogo(resultado);
+        } finally {
+            finalizarAcaoGrafica();
+        }
+    }
+
+    // Atualiza status, tabuleiro e controles depois de qualquer acao valida ou tentativa.
+    private void atualizarTela() {
+        if (!game.temPartidaPreparada() || rotuloStatus == null) {
+            return;
+        }
+
+        Player player = game.getPlayer();
+        rotuloStatus.setText(String.format(
+                "Saúde: %d/%d | Percepção: %d | Dificuldade: %s | Kits: %d | Bastão: %s | Dardos: %d | Inimigos: %d | DEBUG: %s",
                 player.getHealth(),
                 player.getMaxHealth(),
                 player.getPerception(),
                 obterNomeDificuldade(game.getDifficulty()),
-                position.getRow(),
-                position.getColumn()));
+                player.getMedicalKitCount(),
+                player.hasElectricBaton() ? "Sim" : "Não",
+                player.getTranquilizerAmmo(),
+                game.getDinosaurs().size(),
+                game.isDebugMode() ? "Ativado" : "Desativado"
+        ));
+
+        if (botaoDebug != null) {
+            botaoDebug.setText(game.isDebugMode() ? "DEBUG: Ativado" : "DEBUG: Desativado");
+        }
+
+        if (painelTabuleiro != null) {
+            painelTabuleiro.atualizarTabuleiro();
+        }
+
+        repaint();
+    }
+
+    // Trata vitoria, derrota ou saida e oferece novo jogo, reinicio ou encerramento.
+    private void tratarFimDeJogo(ResultadoAcao resultado) {
+        if (resultado == null || resultado.getEstadoPartida() == GameStatus.RUNNING) {
+            return;
+        }
+
+        String[] opcoes = { "Novo jogo", "Reiniciar jogo", "Sair" };
+        int escolha = JOptionPane.showOptionDialog(
+                this,
+                obterMensagemFimDeJogo(resultado.getEstadoPartida()),
+                "Fim de jogo",
+                JOptionPane.DEFAULT_OPTION,
+                JOptionPane.INFORMATION_MESSAGE,
+                null,
+                opcoes,
+                opcoes[0]
+        );
+
+        switch (escolha) {
+            case 1:
+                reiniciarJogoAtual();
+                break;
+            case 2:
+                sairDoPrograma();
+                break;
+            case 0:
+            default:
+                retornarAoMenuInicial();
+                break;
+        }
+    }
+
+    // Retorna ao menu para permitir nova dificuldade e novo mapa.
+    private void retornarAoMenuInicial() {
+        montarMenuInicial();
+    }
+
+    private void reiniciarJogoAtual() {
+        ResultadoAcao resultado = game.reiniciarPartida();
+        mostrarMensagens(resultado);
+
+        if (resultado.getEstadoPartida() == GameStatus.RUNNING) {
+            montarTelaDaPartida();
+            return;
+        }
+
+        montarMenuInicial();
+    }
+
+    private void confirmarSaidaDoPrograma() {
+        if (interfaceGrafica.solicitarConfirmacao("Deseja realmente sair do jogo?")) {
+            sairDoPrograma();
+            return;
+        }
+
+        devolverFocoParaJanela();
+    }
+
+    private void sairDoPrograma() {
+        dispose();
+        System.exit(0);
+    }
+
+    private void trocarPainel(JPanel painel) {
+        if (painelAtual != null) {
+            painelAtual.removeKeyListener(this);
+        }
+
+        painelAtual = painel;
+        painelAtual.setFocusable(true);
+        painelAtual.addKeyListener(this);
+        getContentPane().removeAll();
+        setContentPane(painel);
+        revalidate();
+        repaint();
+        devolverFocoParaJanela();
+    }
+
+    private boolean podeExecutarAcaoDaPartida() {
+        return !processandoAcao && game.isGameRunning();
+    }
+
+    private void finalizarAcaoGrafica() {
+        processandoAcao = false;
+        teclasPressionadas.clear();
+        devolverFocoParaJanela();
+    }
+
+    private void mostrarMensagens(ResultadoAcao resultado) {
+        if (resultado == null || resultado.getMensagens().isEmpty()) {
+            return;
+        }
+
+        StringBuilder mensagemCompleta = new StringBuilder();
+
+        for (String mensagem : resultado.getMensagens()) {
+            if (deveExibirMensagemGrafica(mensagem)) {
+                if (mensagemCompleta.length() > 0) {
+                    mensagemCompleta.append(System.lineSeparator());
+                }
+
+                mensagemCompleta.append(mensagem);
+            }
+        }
+
+        if (mensagemCompleta.length() > 0) {
+            interfaceGrafica.mostrarMensagem(mensagemCompleta.toString());
+        }
+    }
+
+    private boolean deveExibirMensagemGrafica(String mensagem) {
+        return mensagem != null
+                && !mensagem.isEmpty()
+                && !MENSAGEM_TURNO_DINOSSAUROS.equals(mensagem);
     }
 
     private Difficulty escolherDificuldade() {
@@ -167,7 +456,8 @@ public class JanelaPrincipal extends JFrame implements InterfaceUsuario {
                 JOptionPane.QUESTION_MESSAGE,
                 null,
                 opcoes,
-                opcoes[0]);
+                opcoes[0]
+        );
 
         switch (escolha) {
             case 0:
@@ -182,6 +472,10 @@ public class JanelaPrincipal extends JFrame implements InterfaceUsuario {
     }
 
     private String obterNomeDificuldade(Difficulty dificuldade) {
+        if (dificuldade == null) {
+            return "-";
+        }
+
         switch (dificuldade) {
             case EASY:
                 return "Fácil";
@@ -194,52 +488,65 @@ public class JanelaPrincipal extends JFrame implements InterfaceUsuario {
         }
     }
 
-    // Confirma a escolha do usuario antes de encerrar o programa.
-    private void confirmarSaida() {
-        int resposta = JOptionPane.showConfirmDialog(
-                this,
-                "Deseja realmente sair do jogo?",
-                "Sair",
-                JOptionPane.YES_NO_OPTION);
+    private String obterMensagemFimDeJogo(GameStatus estado) {
+        switch (estado) {
+            case VICTORY:
+                return "Você derrotou todos os dinossauros!";
+            case DEFEAT:
+                return "O jogador ficou sem saúde.";
+            case EXITED:
+                return "Partida encerrada.";
+            default:
+                return "Partida finalizada.";
+        }
+    }
 
-        if (resposta == JOptionPane.YES_OPTION) {
-            dispose();
-            System.exit(0);
+    private void devolverFocoParaJanela() {
+        if (painelAtual != null && painelAtual.requestFocusInWindow()) {
+            return;
+        }
+
+        if (!requestFocusInWindow()) {
+            requestFocus();
+        }
+    }
+
+    private MovementDirection obterDirecaoPelaTecla(int codigoTecla) {
+        switch (codigoTecla) {
+            case KeyEvent.VK_W:
+                return MovementDirection.UP;
+            case KeyEvent.VK_S:
+                return MovementDirection.DOWN;
+            case KeyEvent.VK_A:
+                return MovementDirection.LEFT;
+            case KeyEvent.VK_D:
+                return MovementDirection.RIGHT;
+            default:
+                return null;
         }
     }
 
     @Override
-    public void mostrarMensagem(String mensagem) {
-        JOptionPane.showMessageDialog(this, mensagem);
+    public void keyPressed(KeyEvent event) {
+        MovementDirection direcao = obterDirecaoPelaTecla(event.getKeyCode());
+
+        if (direcao == null
+                || !podeExecutarAcaoDaPartida()
+                || teclasPressionadas.contains(event.getKeyCode())) {
+            return;
+        }
+
+        teclasPressionadas.add(event.getKeyCode());
+        executarMovimento(direcao);
     }
 
     @Override
-    public String solicitarEntrada(String mensagem) {
-        return JOptionPane.showInputDialog(this, mensagem);
+    public void keyReleased(KeyEvent event) {
+        teclasPressionadas.remove(event.getKeyCode());
     }
 
     @Override
-    public int solicitarOpcao(String titulo, String[] opcoes) {
-        int escolha = JOptionPane.showOptionDialog(
-                this,
-                titulo,
-                titulo,
-                JOptionPane.DEFAULT_OPTION,
-                JOptionPane.QUESTION_MESSAGE,
-                null,
-                opcoes,
-                opcoes[0]);
-
-        return escolha >= 0 ? escolha + 1 : 0;
-    }
-
-    @Override
-    public boolean solicitarConfirmacao(String mensagem) {
-        int resposta = JOptionPane.showConfirmDialog(
-                this,
-                mensagem,
-                "Confirmação",
-                JOptionPane.YES_NO_OPTION);
-        return resposta == JOptionPane.YES_OPTION;
+    public void keyTyped(KeyEvent event) {
+        // O jogo usa keyPressed para evitar movimentos duplicados por caractere digitado.
     }
 }
