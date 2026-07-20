@@ -2,21 +2,33 @@ package jogo.interfacegrafica;
 
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
-import java.awt.GridLayout;
+import java.awt.Graphics;
+import java.awt.Image;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.File;
+import java.net.URL;
 import jogo.Game;
 import jogo.enums.Difficulty;
 import jogo.interfaceusuario.InterfaceUsuario;
+import jogo.modelo.Player;
+import jogo.modelo.Position;
 
 import javax.swing.JButton;
 import javax.swing.JFrame;
+import javax.swing.ImageIcon;
 import javax.swing.JLabel;
+
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 
 public class JanelaPrincipal extends JFrame implements InterfaceUsuario {
+    private static final String CAMINHO_CAPA_RECURSO = "/jogo/util/images/capa-do-jogo.png";
+    private static final String CAMINHO_CAPA_ARQUIVO = "src/main/java/jogo/util/images/capa-do-jogo.png";
+
     private final Game game;
+    private JLabel informacoesPartida;
+    private PainelTabuleiro painelTabuleiro;
 
     public JanelaPrincipal() {
         this.game = new Game(this);
@@ -28,7 +40,7 @@ public class JanelaPrincipal extends JFrame implements InterfaceUsuario {
     // Configura a janela principal da versao grafica.
     private void configurarJanela() {
         setTitle("Sobrevivência Jurássica");
-        setSize(400, 250);
+        setSize(720, 540);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         setResizable(false);
@@ -36,13 +48,15 @@ public class JanelaPrincipal extends JFrame implements InterfaceUsuario {
 
     // Cria os componentes visuais do menu inicial.
     private void montarMenuInicial() {
-        JPanel painelPrincipal = new JPanel(new BorderLayout());
-        JPanel painelCentral = new JPanel(new GridLayout(3, 1, 10, 10));
+        PainelComImagem painelPrincipal = new PainelComImagem(carregarImagemCapa());
         JPanel painelBotoes = new JPanel(new FlowLayout());
 
         JLabel titulo = new JLabel("SOBREVIVÊNCIA JURÁSSICA", JLabel.CENTER);
         JButton botaoJogar = new JButton("Jogar");
         JButton botaoSair = new JButton("Sair");
+
+        painelPrincipal.setLayout(new BorderLayout());
+        painelBotoes.setOpaque(false);
 
         botaoJogar.addActionListener(new ActionListener() {
             @Override
@@ -61,12 +75,43 @@ public class JanelaPrincipal extends JFrame implements InterfaceUsuario {
         painelBotoes.add(botaoJogar);
         painelBotoes.add(botaoSair);
 
-        painelCentral.add(new JLabel(""));
-        painelCentral.add(titulo);
-        painelCentral.add(painelBotoes);
-
-        painelPrincipal.add(painelCentral, BorderLayout.CENTER);
+        painelPrincipal.add(titulo, BorderLayout.NORTH);
+        painelPrincipal.add(painelBotoes, BorderLayout.SOUTH);
         add(painelPrincipal);
+    }
+
+    private ImageIcon carregarImagemCapa() {
+        URL recurso = getClass().getResource(CAMINHO_CAPA_RECURSO);
+
+        if (recurso != null) {
+            return new ImageIcon(recurso);
+        }
+
+        File arquivo = new File(CAMINHO_CAPA_ARQUIVO);
+
+        if (arquivo.exists()) {
+            return new ImageIcon(arquivo.getPath());
+        }
+
+        return null;
+    }
+
+    private static class PainelComImagem extends JPanel {
+        private final Image imagem;
+
+        private PainelComImagem(ImageIcon imagemCapa) {
+            this.imagem = imagemCapa != null ? imagemCapa.getImage() : null;
+        }
+
+        // Desenha a imagem como fundo do menu inicial.
+        @Override
+        protected void paintComponent(Graphics graphics) {
+            super.paintComponent(graphics);
+
+            if (imagem != null) {
+                graphics.drawImage(imagem, 0, 0, getWidth(), getHeight(), this);
+            }
+        }
     }
 
     // Solicita a dificuldade antes de inicializar uma nova partida.
@@ -78,17 +123,42 @@ public class JanelaPrincipal extends JFrame implements InterfaceUsuario {
         }
 
         game.iniciarNovaPartida(dificuldade);
-        JOptionPane.showMessageDialog(
-                this,
-                "Partida iniciada no modo " + obterNomeDificuldade(dificuldade) + ".\n\n"
-                        + "O tabuleiro gráfico será exibido na próxima etapa.",
-                "Partida iniciada",
-                JOptionPane.INFORMATION_MESSAGE
-        );
+        mostrarTelaDoJogo();
+    }
+
+    // Substitui o menu inicial pela tela da partida.
+    private void mostrarTelaDoJogo() {
+        JPanel telaJogo = new JPanel(new BorderLayout());
+        informacoesPartida = new JLabel("", JLabel.CENTER);
+        painelTabuleiro = new PainelTabuleiro(game);
+
+        atualizarInformacoesPartida();
+        telaJogo.add(informacoesPartida, BorderLayout.NORTH);
+        telaJogo.add(painelTabuleiro, BorderLayout.CENTER);
+
+        setContentPane(telaJogo);
+        setSize(760, 800);
+        setLocationRelativeTo(null);
+        revalidate();
+        repaint();
+    }
+
+    private void atualizarInformacoesPartida() {
+        Player player = game.getPlayer();
+        Position position = player.getCurrentPosition();
+
+        informacoesPartida.setText(String.format(
+                "Saúde: %d/%d | Percepção: %d | Dificuldade: %s | Posição: (%d, %d)",
+                player.getHealth(),
+                player.getMaxHealth(),
+                player.getPerception(),
+                obterNomeDificuldade(game.getDifficulty()),
+                position.getRow(),
+                position.getColumn()));
     }
 
     private Difficulty escolherDificuldade() {
-        String[] opcoes = {"Fácil", "Médio", "Difícil"};
+        String[] opcoes = { "Fácil", "Médio", "Difícil" };
         int escolha = JOptionPane.showOptionDialog(
                 this,
                 "Escolha a dificuldade:",
@@ -97,8 +167,7 @@ public class JanelaPrincipal extends JFrame implements InterfaceUsuario {
                 JOptionPane.QUESTION_MESSAGE,
                 null,
                 opcoes,
-                opcoes[0]
-        );
+                opcoes[0]);
 
         switch (escolha) {
             case 0:
@@ -131,8 +200,7 @@ public class JanelaPrincipal extends JFrame implements InterfaceUsuario {
                 this,
                 "Deseja realmente sair do jogo?",
                 "Sair",
-                JOptionPane.YES_NO_OPTION
-        );
+                JOptionPane.YES_NO_OPTION);
 
         if (resposta == JOptionPane.YES_OPTION) {
             dispose();
@@ -160,8 +228,7 @@ public class JanelaPrincipal extends JFrame implements InterfaceUsuario {
                 JOptionPane.QUESTION_MESSAGE,
                 null,
                 opcoes,
-                opcoes[0]
-        );
+                opcoes[0]);
 
         return escolha >= 0 ? escolha + 1 : 0;
     }
@@ -172,8 +239,7 @@ public class JanelaPrincipal extends JFrame implements InterfaceUsuario {
                 this,
                 mensagem,
                 "Confirmação",
-                JOptionPane.YES_NO_OPTION
-        );
+                JOptionPane.YES_NO_OPTION);
         return resposta == JOptionPane.YES_OPTION;
     }
 }
