@@ -1,5 +1,6 @@
 package jogo.dinossauros;
 
+import jogo.enums.TipoAtaque;
 import jogo.modelo.Position;
 
 /**
@@ -25,18 +26,11 @@ public class TRex extends Dinosaur {
         return 2;
     }
 
-    // Mantém o T-Rex parado durante o turno de movimentação.
-    @Override
-    public int getMovementStepCount() {
-        // O T-Rex permanece parado durante o turno de movimentacao.
-        return 0;
-    }
-
     // Bloqueia qualquer dano causado por ataques com as mãos.
     @Override
-    public boolean canTakeUnarmedDamage() {
+    public boolean podeReceberAtaque(TipoAtaque tipoAtaque) {
         // O T-Rex não pode ser derrotado com as mãos, conforme a regra do jogo.
-        return false;
+        return super.podeReceberAtaque(tipoAtaque) && tipoAtaque != TipoAtaque.MAOS;
     }
 
     @Override

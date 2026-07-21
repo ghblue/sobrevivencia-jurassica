@@ -1,16 +1,15 @@
 package jogo.dinossauros;
 
 import java.util.Objects;
-import jogo.modelo.Movable;
+import jogo.enums.TipoAtaque;
 import jogo.modelo.Position;
 
 /**
  * Base comum dos dinossauros presentes no jogo.
  * Define saúde, posição e comportamentos que podem variar por espécie.
  */
-public abstract class Dinosaur implements Movable {
+public abstract class Dinosaur {
     private static final int DEFAULT_ATTACK_DAMAGE = 1;
-    private static final int DEFAULT_MOVEMENT_STEP_COUNT = 1;
 
     private final String name;
     private int health;
@@ -40,18 +39,12 @@ public abstract class Dinosaur implements Movable {
         this.health = health;
     }
 
-    @Override
     public Position getCurrentPosition() {
         return currentPosition;
     }
 
-    private void setCurrentPosition(Position currentPosition) {
+    protected final void setCurrentPosition(Position currentPosition) {
         this.currentPosition = Objects.requireNonNull(currentPosition, "A posicao atual e obrigatoria.");
-    }
-
-    @Override
-    public void moveTo(Position newPosition) {
-        setCurrentPosition(newPosition);
     }
 
     public String getVisualSymbol() {
@@ -75,15 +68,9 @@ public abstract class Dinosaur implements Movable {
         return DEFAULT_ATTACK_DAMAGE;
     }
 
-    public int getMovementStepCount() {
-        return DEFAULT_MOVEMENT_STEP_COUNT;
-    }
-
-    public boolean canTakeUnarmedDamage() {
-        return true;
-    }
-
-    public boolean canBeHitByTranquilizer() {
+    // Por padrão, dinossauros podem receber qualquer tipo de ataque do jogador.
+    public boolean podeReceberAtaque(TipoAtaque tipoAtaque) {
+        Objects.requireNonNull(tipoAtaque, "O tipo de ataque e obrigatorio.");
         return true;
     }
 

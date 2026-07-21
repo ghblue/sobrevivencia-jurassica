@@ -5,7 +5,7 @@ import jogo.modelo.Position;
 /**
  * Dinossauro comum que utiliza as regras padrão de ataque e movimento.
  */
-public class Troodon extends Dinosaur {
+public class Troodon extends MovableDinosaur {
     public static final int INITIAL_HEALTH = 2;
     public static final String VISUAL_SYMBOL = "T";
 

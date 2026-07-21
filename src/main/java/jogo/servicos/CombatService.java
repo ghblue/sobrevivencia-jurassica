@@ -5,7 +5,10 @@ import java.util.List;
 import java.util.Objects;
 import jogo.dinossauros.Dinosaur;
 import jogo.enums.CombatResult;
+import jogo.enums.TipoAtaque;
 import jogo.interfaceusuario.InterfaceUsuario;
+import jogo.itens.ElectricBaton;
+import jogo.itens.TranquilizerGun;
 import jogo.modelo.Player;
 import jogo.util.Dice;
 
@@ -16,10 +19,14 @@ import jogo.util.Dice;
 public class CombatService {
     private final InterfaceUsuario interfaceUsuario;
     private final Dice dice;
+    private final ElectricBaton electricBaton;
+    private final TranquilizerGun tranquilizerGun;
 
     public CombatService(InterfaceUsuario interfaceUsuario, Dice dice) {
         this.interfaceUsuario = Objects.requireNonNull(interfaceUsuario, "A interface de usuario e obrigatoria.");
         this.dice = Objects.requireNonNull(dice, "O dado e obrigatorio.");
+        this.electricBaton = new ElectricBaton();
+        this.tranquilizerGun = new TranquilizerGun();
     }
 
     public CombatResult startCombat(Player player, Dinosaur dinosaur) {
@@ -209,7 +216,7 @@ public class CombatService {
         int roll = dice.rollD6();
         mensagens.add("Rolou o dado de ataque com as maos e tirou " + roll + ".");
 
-        if (!dinosaur.canTakeUnarmedDamage()) {
+        if (!dinosaur.podeReceberAtaque(TipoAtaque.MAOS)) {
             mensagens.add("O ataque com as maos nao surtiu efeito contra o T-Rex.");
             return 0;
         }
@@ -231,15 +238,7 @@ public class CombatService {
         int roll = dice.rollD6();
         mensagens.add("Rolou o dado de ataque com o bastao eletrico e tirou " + roll + ".");
 
-        if (roll > 5) {
-            return 2;
-        }
-
-        if (roll == 1) {
-            return 0;
-        }
-
-        return 1;
+        return electricBaton.calcularDano(roll);
     }
 
     // Consome o dardo e aplica a regra de esquiva especial do Velociraptor.
@@ -247,12 +246,12 @@ public class CombatService {
         player.useTranquilizerAmmo();
         mensagens.add("Voce gastou 1 municao de dardo.");
 
-        if (!dinosaur.canBeHitByTranquilizer()) {
+        if (!dinosaur.podeReceberAtaque(TipoAtaque.DARDO)) {
             mensagens.add("O Velociraptor desviou do dardo.");
             return 0;
         }
 
-        return 2;
+        return tranquilizerGun.calcularDano();
     }
 
     // Resolve o turno inimigo usando percepção para decidir a esquiva.

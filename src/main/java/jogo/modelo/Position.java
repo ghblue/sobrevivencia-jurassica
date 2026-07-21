@@ -24,6 +24,7 @@ public class Position {
 
     @Override
     public boolean equals(Object object) {
+        // Posições com a mesma linha e coluna representam a mesma casa do tabuleiro.
         if (this == object) {
             return true;
         }
@@ -38,6 +39,7 @@ public class Position {
 
     @Override
     public int hashCode() {
+        // O hash permite usar Position corretamente em conjuntos como occupiedPositions.
         return Objects.hash(row, column);
     }
 }

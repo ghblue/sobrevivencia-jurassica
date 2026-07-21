@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Random;
 import jogo.dinossauros.Dinosaur;
+import jogo.dinossauros.MovableDinosaur;
 import jogo.enums.CombatResult;
 import jogo.enums.MovementDirection;
 import jogo.modelo.Board;
@@ -34,8 +35,12 @@ public class DinosaurMovementService {
         for (int index = 0; index < dinosaurs.size() && player.isAlive(); index++) {
             Dinosaur dinosaur = dinosaurs.get(index);
 
+            if (!(dinosaur instanceof MovableDinosaur)) {
+                continue;
+            }
+
             // A lista pode diminuir durante o turno quando o jogador vence um combate.
-            boolean removed = moveDinosaur(board, player, dinosaurs, dinosaur, mensagens);
+            boolean removed = moveDinosaur(board, player, dinosaurs, (MovableDinosaur) dinosaur, mensagens);
 
             if (removed) {
                 index--;
@@ -50,7 +55,7 @@ public class DinosaurMovementService {
             Board board,
             Player player,
             List<Dinosaur> dinosaurs,
-            Dinosaur dinosaur,
+            MovableDinosaur dinosaur,
             List<String> mensagens
     ) {
         int stepCount = dinosaur.getMovementStepCount();

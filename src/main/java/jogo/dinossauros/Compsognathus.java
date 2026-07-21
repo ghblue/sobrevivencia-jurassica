@@ -5,7 +5,7 @@ import jogo.modelo.Position;
 /**
  * Dinossauro de menor resistência, com um ponto de saúde.
  */
-public class Compsognathus extends Dinosaur {
+public class Compsognathus extends MovableDinosaur {
     public static final int INITIAL_HEALTH = 1;
     public static final String VISUAL_SYMBOL = "C";
 

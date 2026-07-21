@@ -6,6 +6,7 @@ import java.util.Random;
 import java.util.Set;
 import jogo.dinossauros.Compsognathus;
 import jogo.dinossauros.Dinosaur;
+import jogo.dinossauros.MovableDinosaur;
 import jogo.dinossauros.TRex;
 import jogo.dinossauros.Troodon;
 import jogo.dinossauros.Velociraptor;
@@ -36,9 +37,10 @@ public class Board {
             throw new IllegalArgumentException("O tamanho do tabuleiro deve ser positivo.");
         }
 
-        // Todas as células pertencem ao tabuleiro e começam com o símbolo de espaço vazio.
         this.size = size;
+        // A matriz nasce com posições nulas e é preenchida linha por linha em seguida.
         this.cells = new Cell[size][size];
+        // O conjunto acelera consultas de posições ocupadas por jogador, paredes e dinossauros.
         this.occupiedPositions = new HashSet<>();
         initializeCells();
     }
@@ -48,6 +50,7 @@ public class Board {
         this.cells = new Cell[size][size];
         this.occupiedPositions = new HashSet<>(source.occupiedPositions);
 
+        // Cada célula copiada mantém suas duas camadas de símbolo sem compartilhar o objeto original.
         for (int row = 0; row < size; row++) {
             for (int column = 0; column < size; column++) {
                 Cell sourceCell = source.cells[row][column];
@@ -69,6 +72,7 @@ public class Board {
     }
 
     public Cell getCell(Position position) {
+        // A Position informa os índices usados para acessar linha e coluna da matriz.
         validatePosition(position);
         return cells[position.getRow()][position.getColumn()];
     }
@@ -90,12 +94,14 @@ public class Board {
     // Coloca o jogador em sua posição inicial no tabuleiro.
     public void placePlayer(Player player) {
         Objects.requireNonNull(player, "O jogador e obrigatorio.");
+        // A posição armazenada no jogador define qual célula recebe o símbolo P.
         placeElement(player.getCurrentPosition(), PLAYER_SYMBOL);
     }
 
     // Coloca um dinossauro usando o símbolo definido por sua espécie.
     public void placeDinosaur(Dinosaur dinosaur) {
         Objects.requireNonNull(dinosaur, "O dinossauro e obrigatorio.");
+        // A posição do dinossauro e a célula do tabuleiro são mantidas sincronizadas.
         placeElement(dinosaur.getCurrentPosition(), dinosaur.getVisualSymbol());
     }
 
@@ -188,7 +194,7 @@ public class Board {
     }
 
     // Atualiza de forma sincronizada a posição e o símbolo do dinossauro.
-    public void moveDinosaurTo(Dinosaur dinosaur, Position newPosition) {
+    public void moveDinosaurTo(MovableDinosaur dinosaur, Position newPosition) {
         Objects.requireNonNull(dinosaur, "O dinossauro e obrigatorio.");
         Objects.requireNonNull(newPosition, "A nova posicao e obrigatoria.");
 
@@ -241,11 +247,12 @@ public class Board {
         }
     }
 
-    // Preenche a matriz com células vazias antes de posicionar os elementos.
+    // Cria uma célula vazia para cada coordenada da matriz do tabuleiro.
     private void initializeCells() {
         for (int row = 0; row < size; row++) {
             for (int column = 0; column < size; column++) {
-                cells[row][column] = new Cell(EMPTY_CELL_SYMBOL);
+                Position position = new Position(row, column);
+                cells[position.getRow()][position.getColumn()] = new Cell(EMPTY_CELL_SYMBOL);
             }
         }
     }
@@ -254,15 +261,17 @@ public class Board {
         validatePosition(position);
         validateSymbol(symbol);
 
+        // A camada principal não pode receber dois ocupantes ao mesmo tempo.
         if (occupiedPositions.contains(position)) {
             throw new IllegalArgumentException("A posicao ja esta ocupada.");
         }
 
         getCell(position).setSymbol(symbol);
+        // Toda entidade ou parede na camada principal entra no conjunto de ocupadas.
         occupiedPositions.add(position);
     }
 
-    // Move qualquer elemento que implemente o contrato Movable.
+    // Move qualquer elemento móvel limpando a célula antiga e ocupando a nova.
     private void moveElement(Movable element, Position newPosition, String symbol) {
         clearPosition(element.getCurrentPosition());
         element.moveTo(newPosition);
@@ -273,11 +282,13 @@ public class Board {
         validatePosition(position);
         validateSymbol(symbol);
         getCell(position).setSymbol(symbol);
+        // Recoloca a nova posição no controle de ocupação depois do movimento.
         occupiedPositions.add(position);
     }
 
     private void clearPosition(Position position) {
         validatePosition(position);
+        // Limpa apenas a camada principal para preservar caixas na camada secundária.
         getCell(position).setPrimarySymbol(EMPTY_CELL_SYMBOL);
         occupiedPositions.remove(position);
     }
@@ -293,12 +304,14 @@ public class Board {
     private void validatePosition(Position position) {
         Objects.requireNonNull(position, "A posicao e obrigatoria.");
 
+        // Todas as consultas e alterações passam por esta validação de limites.
         if (!isInsideBoard(position)) {
             throw new IllegalArgumentException("A posicao esta fora do tabuleiro.");
         }
     }
 
     private boolean isInsideBoard(Position position) {
+        // Uma posição válida precisa estar dentro das linhas e colunas existentes.
         return position.getRow() >= 0
                 && position.getRow() < size
                 && position.getColumn() >= 0

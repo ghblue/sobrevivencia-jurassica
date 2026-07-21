@@ -1,11 +1,12 @@
 package jogo.dinossauros;
 
+import jogo.enums.TipoAtaque;
 import jogo.modelo.Position;
 
 /**
  * Dinossauro ágil que se movimenta duas vezes por turno e desvia de dardos.
  */
-public class Velociraptor extends Dinosaur {
+public class Velociraptor extends MovableDinosaur {
     public static final int INITIAL_HEALTH = 2;
     public static final String VISUAL_SYMBOL = "V";
 
@@ -27,9 +28,9 @@ public class Velociraptor extends Dinosaur {
 
     // Impede que o Velociraptor seja atingido pelo dardo tranquilizante.
     @Override
-    public boolean canBeHitByTranquilizer() {
+    public boolean podeReceberAtaque(TipoAtaque tipoAtaque) {
         // A agilidade do Velociraptor sempre impede o acerto do dardo tranquilizante.
-        return false;
+        return super.podeReceberAtaque(tipoAtaque) && tipoAtaque != TipoAtaque.DARDO;
     }
 
     @Override

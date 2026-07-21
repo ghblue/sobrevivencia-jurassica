@@ -14,11 +14,14 @@ public class Cell {
 
     public Cell(String symbol) {
         this.emptySymbol = Objects.requireNonNull(symbol, "O simbolo vazio e obrigatorio.");
+        // A camada principal guarda jogador, paredes e dinossauros.
         this.primarySymbol = symbol;
+        // A camada secundária permite manter uma caixa sob outro elemento.
         this.secondarySymbol = symbol;
     }
 
     public String getSymbol() {
+        // A camada principal tem prioridade visual sobre a caixa de suprimentos.
         if (!emptySymbol.equals(primarySymbol)) {
             return primarySymbol;
         }
